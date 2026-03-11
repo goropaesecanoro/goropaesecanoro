@@ -81,6 +81,17 @@ async function showClosedScreen() {
 
   if (appConfig.svelaClassifica && currentSerata === 3) {
     await renderReveal();
+    // Se mostraTop5Finale è attivo, inietta la classifica festival sopra quella pubblica
+    const festDiv = document.getElementById('reveal-festival-section');
+    if (festDiv) {
+      if (appConfig.mostraTop5Finale) {
+        const festHtml = await renderTop5Finale();
+        festDiv.innerHTML = festHtml || '';
+        festDiv.style.display = festHtml ? '' : 'none';
+      } else {
+        festDiv.style.display = 'none';
+      }
+    }
     showScreen('screen-reveal');
     return;
   }
@@ -111,8 +122,8 @@ async function showClosedScreen() {
 
       document.getElementById('closed-random-note').style.display = 'block';
       html += `
-        <div class="top5-section" style="margin-top:${html ? '28px' : '0'}">
-          <div class="top5-label">I vostri preferiti questa sera</div>
+        <div class="top5-section"${html ? ' style="margin-top:28px"' : ''}>
+          <div class="top5-label">I più apprezzati stasera</div>
           ${top5.map(name => {
             const song = singers.find(s=>s.name===name)?.song || '';
             return `

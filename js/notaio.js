@@ -84,7 +84,7 @@ async function checkExistingRanking() {
       };
       document.getElementById('btn-show-jury').style.display    = '';
       document.getElementById('btn-show-ranking').style.display = '';
-      document.getElementById('btn-show-top3').style.display    = '';
+      document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
     }
     // Festival (solo serata 3)
     if (currentSerata === 3) {
@@ -510,7 +510,7 @@ async function computeRanking() {
 
   document.getElementById('btn-show-jury').style.display    = '';
   document.getElementById('btn-show-ranking').style.display = '';
-  document.getElementById('btn-show-top3').style.display    = '';
+  document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
 
   showToast(`✓ Classifica calcolata (${judgesWithVotes.length} giudici)`);
 }
@@ -584,7 +584,7 @@ async function openRankingOverlay(mode = 'full') {
       // Mostra i pulsanti
       document.getElementById('btn-show-jury').style.display    = '';
       document.getElementById('btn-show-ranking').style.display = '';
-      document.getElementById('btn-show-top3').style.display    = '';
+      document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
     } catch(e) { showToast('Errore caricamento classifica'); return; }
   }
   const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
@@ -651,7 +651,7 @@ async function showTop3Random() {
       lastRanking = { serataScores: data.ranking||[], judgeStats: data.judgeStats||{}, judgesWithVotes: Object.keys(data.judgeStats||{}), criticRanking: data.criticRanking||null };
       document.getElementById('btn-show-jury').style.display    = '';
       document.getElementById('btn-show-ranking').style.display = '';
-      document.getElementById('btn-show-top3').style.display    = '';
+      document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
     } catch(e) { showToast('Calcola prima la classifica'); return; }
   }
   const top3 = lastRanking.serataScores.slice(0,3)
