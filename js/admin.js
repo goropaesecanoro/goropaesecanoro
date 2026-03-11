@@ -50,6 +50,12 @@ export async function initAdminApp() {
     }
 
     await Promise.all([loadConfig(), loadAllSingers()]);
+    // Mostra pulsante notaio se l'utente è anche notaio
+    try {
+      const notaioSnap = await getDoc(doc(db,'notai',user.uid));
+      const btn = document.getElementById('btn-goto-notaio');
+      if (btn) btn.style.display = notaioSnap.exists() ? '' : 'none';
+    } catch(e) {}
     renderAdminPanel(user);
     showScreen('screen-admin');
   });
