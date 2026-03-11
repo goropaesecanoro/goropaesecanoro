@@ -145,14 +145,19 @@ function updateSerataLabel() {
   // Mostra/nascondi pulsante ordine finale
   const oBtn = document.getElementById('btn-ordine-finale');
   if (oBtn) oBtn.style.display = currentSerata === 3 ? '' : 'none';
+  // Mostra/nascondi toggle top5 finale festival
+  const t5f = document.getElementById('toggle-top5finale-wrap');
+  if (t5f) t5f.style.display = currentSerata === 3 ? '' : 'none';
 }
 
 function updateSwitches() {
-  setSwitchState('toggle-voto',  appConfig.votoAperto !== false);
-  setSwitchState('toggle-top5',  !!appConfig.mostraTop5);
-  setSwitchState('toggle-svela', !!appConfig.svelaClassifica);
+  setSwitchState('toggle-voto',       appConfig.votoAperto !== false);
+  setSwitchState('toggle-top5',       !!appConfig.mostraTop5);
+  setSwitchState('toggle-top5finale', !!appConfig.mostraTop5Finale);
+  setSwitchState('toggle-svela',      !!appConfig.svelaClassifica);
   const votoAperto = appConfig.votoAperto !== false;
   document.getElementById('toggle-top5-wrap')?.classList.toggle('disabled', votoAperto);
+  document.getElementById('toggle-top5finale-wrap')?.classList.toggle('disabled', votoAperto || currentSerata !== 3);
   document.getElementById('toggle-svela-wrap')?.classList.toggle('disabled', votoAperto || currentSerata !== 3);
 }
 
@@ -211,6 +216,26 @@ async function toggleTop5(checked) {
   await saveConfig({ mostraTop5: checked });
   updateSwitches();
   showToast(checked ? 'Top 5 visibile al pubblico' : 'Top 5 nascosto');
+}
+
+async function toggleTop5Finale(checked) {
+  await saveConfig({ mostraTop5Finale: checked });
+  updateSwitches();
+  if (checked) {
+    // Verifica che la classifica festival sia già stata calcolata dal Notaio
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking','festival'));
+      if (!snap.exists() || !snap.data().ranking?.length) {
+        showToast('⚠️ Classifica festival non ancora calcolata dal Notaio', 5000);
+      } else {
+        showToast('✓ Top 5 finale visibile al pubblico');
+      }
+    } catch(e) {
+      showToast('⚠️ Impossibile verificare la classifica festival', 4000);
+    }
+  } else {
+    showToast('Top 5 finale nascosto');
+  }
 }
 
 async function toggleSvela(checked) {
@@ -596,6 +621,7 @@ window.confirmSerataChange    = confirmSerataChange;
 window.closeOverlay           = closeOverlay;
 window.toggleVoto             = e => toggleVoto(e.target.checked);
 window.toggleTop5             = e => toggleTop5(e.target.checked);
+window.toggleTop5Finale       = e => toggleTop5Finale(e.target.checked);
 window.toggleSvela            = e => toggleSvela(e.target.checked);
 window.refreshRanking         = refreshRanking;
 window.showFinalRanking           = showFinalRanking;

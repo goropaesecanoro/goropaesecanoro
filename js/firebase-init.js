@@ -51,7 +51,7 @@ export function showScreen(id) {
 }
 
 /** Toast notification */
-export function showToast(msg) {
+export function showToast(msg, duration = 2800) {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;

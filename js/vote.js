@@ -86,10 +86,56 @@ async function showClosedScreen() {
   }
 
   const el = document.getElementById('closed-dynamic');
+  let html = '';
+
+  // ── SERATA 3: classifica festival prima, poi preferenze pubblico ──
+  if (currentSerata === 3) {
+
+    if (appConfig.mostraTop5Finale) {
+      const festHtml = await renderTop5Finale();
+      if (festHtml) html += festHtml;
+    }
+
+    if (appConfig.mostraTop5) {
+      const snap = await getDocs(collection(db, `votes_s${currentSerata}`));
+      const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
+      const scores = {};
+      singers.forEach(s => scores[s.name] = 0);
+      allVotes.forEach(({vote}) =>
+        vote?.forEach((name,i) => { if (scores[name] !== undefined) scores[name] += POINTS[i]; })
+      );
+      const top5 = Object.entries(scores)
+        .sort((a,b) => b[1]-a[1]).slice(0,5)
+        .map(([name]) => name)
+        .sort(() => Math.random() - 0.5);
+
+      document.getElementById('closed-random-note').style.display = 'block';
+      html += `
+        <div class="top5-section" style="margin-top:${html ? '28px' : '0'}">
+          <div class="top5-label">I vostri preferiti questa sera</div>
+          ${top5.map(name => {
+            const song = singers.find(s=>s.name===name)?.song || '';
+            return `
+            <div class="top5-card">
+              <div class="top5-dot"></div>
+              <div class="s-info">
+                <div class="s-name">${name}</div>
+                ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    el.innerHTML = html;
+    showScreen('screen-closed');
+    return;
+  }
+
+  // ── SERATE 1 e 2: solo preferenze pubblico ──
   if (appConfig.mostraTop5) {
     const snap     = await getDocs(collection(db, `votes_s${currentSerata}`));
     const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
-
     const scores = {};
     singers.forEach(s => scores[s.name] = 0);
     allVotes.forEach(({vote}) =>
@@ -120,6 +166,41 @@ async function showClosedScreen() {
     el.innerHTML = '';
   }
   showScreen('screen-closed');
+}
+
+async function renderTop5Finale() {
+  try {
+    const snap = await getDoc(doc(db,'jury_ranking','festival'));
+    if (!snap.exists() || !snap.data().ranking?.length) return '';
+    const ranking = snap.data().ranking;
+    const sorted = [...ranking].sort((a,b) => b.total - a.total);
+    const labels = ['🥇','🥈','🥉','4°','5°'];
+    let pos = 1; let rows = []; let i = 0;
+    while (i < sorted.length && pos <= 5) {
+      const score = parseFloat(sorted[i].total.toFixed(2));
+      let j = i;
+      while (j < sorted.length && parseFloat(sorted[j].total.toFixed(2)) === score) j++;
+      const count = j - i;
+      const label = labels[pos-1] || `${pos}°`;
+      for (let k = i; k < j && rows.length < 5; k++) {
+        rows.push({ name: sorted[k].name, song: sorted[k].song||'', label, exAequo: count > 1 });
+      }
+      pos += count; i = j;
+    }
+    return `
+      <div class="top5-section">
+        <div class="top5-label">Classifica finale festival</div>
+        ${rows.map(r => `
+        <div class="summary-row">
+          <span class="s-rank" style="font-size:18px;min-width:36px;text-align:center">${r.label}</span>
+          <div class="s-info">
+            <div class="s-name">${r.name}</div>
+            ${r.song ? `<div class="s-song">♪ ${r.song}</div>` : ''}
+            ${r.exAequo ? '<div style="font-size:9px;color:var(--gold);opacity:.7;text-transform:uppercase;letter-spacing:1px;margin-top:2px">ex-aequo</div>' : ''}
+          </div>
+        </div>`).join('')}
+      </div>`;
+  } catch(e) { return ''; }
 }
 
 async function renderReveal() {
