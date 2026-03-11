@@ -66,8 +66,7 @@ async function initNotaio() {
   await loadJudges();
   await loadDraftVotes();
 
-  document.getElementById('screen-loading').style.display = 'none';
-  document.getElementById('screen-notaio').style.display  = '';
+  showScreen('screen-notaio');
 }
 
 // ══════════════════════════════════════════════
