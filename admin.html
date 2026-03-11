@@ -144,6 +144,7 @@
     <div class="admin-actions">
       <button class="btn-secondary" onclick="openSingersEditor(1)">🎤 Modifica cantanti Serata 1</button>
       <button class="btn-secondary" onclick="openSingersEditor(2)">🎤 Modifica cantanti Serata 2</button>
+      <button class="btn-secondary" id="btn-ordine-finale" style="display:none" onclick="openFinalOrderEditor()">🔢 Ordine Serata Finale</button>
       <button class="btn-secondary" onclick="exportCSV()">📥 Esporta CSV serata corrente</button>
       <button class="btn-secondary btn-danger" onclick="confirmReset()">🗑️ Azzera voti serata corrente</button>
       <button class="btn-secondary" onclick="signOutAdmin()">← Esci dall'area admin</button>
@@ -151,6 +152,21 @@
   </div>
 
 </div><!-- /screen-admin -->
+
+
+<!-- ══ OVERLAY — ORDINE SERATA FINALE ════════════ -->
+<div class="overlay" id="overlay-order" style="display:none">
+  <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:400px">
+    <h3>Ordine Serata Finale</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      Trascina i cantanti per impostare l'ordine di apparizione sul palco.<br>
+      Le card dei votatori seguiranno questo ordine.
+    </p>
+    <div id="order-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+    <button class="btn-overlay-ok" onclick="saveFinalOrder()">💾 Salva ordine</button>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-order')">Annulla</button>
+  </div>
+</div>
 
 <!-- ══ OVERLAY — CAMBIO SERATA ════════════════════ -->
 <div class="overlay" id="overlay-serata" style="display:none">
