@@ -104,14 +104,15 @@ async function showClosedScreen() {
     el.innerHTML = `
       <div class="top5-section">
         <div class="top5-label">I più apprezzati stasera</div>
-        ${top5.map(name => {
+        ${top5.map((name,i) => {
           const song = singers.find(s=>s.name===name)?.song || '';
+          const dots = ['①','②','③','④','⑤'];
           return `
-          <div class="top5-card">
-            <div class="top5-dot"></div>
-            <div class="top5-info">
-              <div class="top5-name">${name}</div>
-              ${song ? `<div class="top5-song">♪ ${song}</div>` : ''}
+          <div class="summary-row">
+            <span class="s-rank" style="font-size:18px;opacity:.7">${dots[i]}</span>
+            <div class="s-info">
+              <div class="s-name">${name}</div>
+              ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
             </div>
           </div>`;
         }).join('')}
@@ -128,12 +129,22 @@ async function renderReveal() {
     if (saved.exists()) {
       const ranking = saved.data().ranking;
       const labels  = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+      // Costruisci songMap da singers caricati
+      const songMap = {};
+      singers.forEach(s => { songMap[s.name] = s.song || ''; });
       document.getElementById('reveal-ranking').innerHTML =
-        ranking.map((c,i) => `
+        ranking.map((c,i) => {
+          const name = c.name || c;
+          const song = songMap[name] || '';
+          return `
           <div class="summary-row">
             <span class="s-rank" style="font-size:20px">${labels[i]||''}</span>
-            <span class="s-name">${c.name || c}</span>
-          </div>`).join('');
+            <div class="s-info">
+              <div class="s-name">${name}</div>
+              ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('');
       return;
     }
   } catch(e) {}
@@ -146,12 +157,20 @@ async function renderReveal() {
   );
   const ranking = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const labels  = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+  const songMap2 = {};
+  singers.forEach(s => { songMap2[s.name] = s.song || ''; });
   document.getElementById('reveal-ranking').innerHTML =
-    ranking.map(([name],i) => `
+    ranking.map(([name],i) => {
+      const song = songMap2[name] || '';
+      return `
       <div class="summary-row">
         <span class="s-rank" style="font-size:20px">${labels[i]||''}</span>
-        <span class="s-name">${name}</span>
-      </div>`).join('');
+        <div class="s-info">
+          <div class="s-name">${name}</div>
+          ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
 }
 
 // ══════════════════════════════════════════════
@@ -362,11 +381,11 @@ function showConfirmOverlay() {
   const medals  = ['🥇','🥈','🥉','4°','5°'];
   const preview = document.getElementById('confirm-vote-preview');
   preview.innerHTML = selections.map((idx,i) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-      <span style="font-size:20px;width:32px;text-align:center">${medals[i]}</span>
-      <div>
-        <div style="font-size:14px;font-weight:500">${singers[idx].name}</div>
-        ${singers[idx].song ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">♪ ${singers[idx].song}</div>` : ''}
+    <div class="summary-row">
+      <span class="s-rank" style="font-size:20px">${medals[i]}</span>
+      <div class="s-info">
+        <div class="s-name">${singers[idx].name}</div>
+        ${singers[idx].song ? `<div class="s-song">♪ ${singers[idx].song}</div>` : ''}
       </div>
     </div>`).join('');
   document.getElementById('overlay-confirm-vote').style.display = 'flex';
