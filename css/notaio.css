@@ -275,9 +275,8 @@
   text-align: center;
 }
 
-/* # allineato a sinistra come la colonna pos, Cantante a sinistra */
-.n-ranking-head span:first-child { text-align: left; }
-.n-ranking-head span:nth-child(2) { text-align: left; padding-left: 2px; }
+/* Intestazioni: # e Cantante a sinistra, colonne numeriche centrate */
+.n-ranking-head span { text-align: center; }
 
 .n-ranking-row {
   display: grid;
@@ -296,7 +295,7 @@
   font-size: 16px;
   font-weight: 900;
   color: var(--muted);
-  text-align: left;
+  text-align: center;
 }
 
 .n-ranking-row:nth-child(1) .n-r-pos { color: #FFD700; }
