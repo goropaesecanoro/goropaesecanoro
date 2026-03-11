@@ -85,9 +85,10 @@
     <div id="votes-grid" class="votes-grid" style="display:none"></div>
 
     <!-- Salva voti giudice -->
-    <button class="btn-primary" id="btn-save-votes" style="display:none;margin-top:14px" onclick="saveJudgeVotes()">
-      💾 Salva voti giudice
-    </button>
+    <div id="votes-actions" style="display:none;margin-top:14px;display:none;gap:8px;flex-direction:column">
+      <button class="btn-primary" id="btn-save-votes" onclick="saveJudgeVotes()">💾 Salva voti giudice</button>
+      <button class="btn-secondary btn-danger" id="btn-clear-votes" onclick="clearJudgeVotes()">🗑️ Elimina tutti i voti</button>
+    </div>
   </div>
 
   <!-- ── 3. Calcolo e classifica ── -->
@@ -96,7 +97,7 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Calcola la classifica tecnica con Z-score per giudice, poi aggiunge il bonus pubblico della serata corrente.
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="admin-actions">
       <button class="btn-primary" onclick="computeRanking()">⚡ Calcola classifica serata</button>
       <button class="btn-secondary" id="btn-show-ranking" style="display:none" onclick="openRankingOverlay()">📊 Mostra classifica completa</button>
       <button class="btn-secondary" id="btn-show-top3" style="display:none" onclick="showTop3Random()">🎭 Mostra top 3 per conduttori</button>
@@ -109,7 +110,7 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Somma dei punteggi delle tre serate (tecnico normalizzato + bonus pubblico).
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="admin-actions">
       <button class="btn-primary" onclick="computeFestivalRanking()">🏆 Calcola classifica festival</button>
       <button class="btn-secondary" id="btn-show-festival" style="display:none" onclick="openFestivalOverlay()">📋 Mostra classifica festival</button>
       <button class="btn-secondary" id="btn-show-critica" style="display:none" onclick="openCriticaOverlay()">🎓 Premio della Critica</button>
