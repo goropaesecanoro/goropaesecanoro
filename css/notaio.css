@@ -1,0 +1,321 @@
+/* ══════════════════════════════════════════════
+   notaio.css — Stili pannello Notaio
+   ══════════════════════════════════════════════ */
+
+/* ── Giudici preview ── */
+.judges-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+
+.judge-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surf2);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.judge-chip.critic {
+  border-color: rgba(201,168,76,.4);
+  background: rgba(201,168,76,.08);
+  color: var(--gold);
+}
+
+.critic-badge {
+  font-size: 10px;
+  color: var(--gold);
+  opacity: .7;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+/* ── Form fields ── */
+.n-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.n-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+.n-select {
+  background: var(--surf2);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  width: 100%;
+  cursor: pointer;
+}
+
+.n-select:focus { outline: none; border-color: var(--gold); }
+
+.n-input {
+  background: var(--surf2);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  width: 100%;
+}
+
+.n-input:focus { outline: none; border-color: var(--gold); }
+
+/* ── Completamento giudici ── */
+.judges-completion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.completion-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surf2);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+
+.completion-row.done {
+  border-color: rgba(100,200,100,.25);
+  background: rgba(100,200,100,.05);
+}
+
+.completion-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: .4;
+  flex-shrink: 0;
+}
+
+.completion-dot.done {
+  background: #7ecb7e;
+  opacity: 1;
+}
+
+.completion-name {
+  flex: 1;
+  color: var(--text);
+}
+
+.completion-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── Griglia voti ── */
+.votes-grid {
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+.votes-grid-header {
+  display: grid;
+  grid-template-columns: 1fr 70px 70px;
+  padding: 10px 12px;
+  background: var(--surf3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.votes-grid-header .vg-singer { text-align: left; }
+
+.votes-grid-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 70px;
+  align-items: center;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,.04);
+  transition: background .2s;
+}
+
+.votes-grid-row.even { background: rgba(255,255,255,.015); }
+
+.votes-grid-row.complete {
+  background: rgba(100,200,100,.04);
+}
+
+.vg-singer-info { min-width: 0; }
+
+.vg-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vg-song {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vg-score {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.vg-score span { font-size: 10px; opacity: .6; }
+
+.score-input {
+  width: 52px;
+  background: var(--surf3);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 4px;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.score-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(201,168,76,.08);
+}
+
+/* Nasconde frecce spinner numerici */
+.score-input::-webkit-inner-spin-button,
+.score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.score-input[type=number] { -moz-appearance: textfield; }
+
+/* ── Editor giudici ── */
+.judge-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.critic-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surf3);
+  border: 1px solid rgba(255,255,255,.1);
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+}
+
+.critic-toggle.active {
+  background: rgba(201,168,76,.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.judge-name-input {
+  flex: 1;
+}
+
+.judge-remove-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.judge-remove-btn:hover { border-color: #e05555; color: #e05555; }
+
+/* ── Classifica notaio ── */
+.n-ranking-head {
+  display: grid;
+  grid-template-columns: 36px 1fr 40px 40px 50px;
+  padding: 10px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  text-align: center;
+}
+
+.n-ranking-head span:nth-child(2) { text-align: left; }
+
+.n-ranking-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 40px 40px 50px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  align-items: center;
+  text-align: center;
+}
+
+.n-ranking-row:last-child { border-bottom: none; }
+.n-ranking-row:first-child { background: rgba(201,168,76,.06); }
+
+.n-r-pos {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--muted);
+  text-align: left;
+}
+
+.n-ranking-row:nth-child(1) .n-r-pos { color: #FFD700; }
+.n-ranking-row:nth-child(2) .n-r-pos { color: #C0C0C0; }
+.n-ranking-row:nth-child(3) .n-r-pos { color: #CD7F32; }
+
+.n-r-score  { font-size: 13px; color: var(--muted); }
+.n-r-bonus  { font-size: 13px; color: #7ecb7e; }
+.n-r-total  { font-size: 15px; font-weight: 600; color: var(--gold); }
+
+/* s-info già in style.css — compatibile */
+
+/* ── Btn icon small ── */
+.btn-icon-sm {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 100px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.btn-icon-sm:hover { border-color: var(--gold); color: var(--gold); }
