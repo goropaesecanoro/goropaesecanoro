@@ -104,12 +104,11 @@ async function showClosedScreen() {
     el.innerHTML = `
       <div class="top5-section">
         <div class="top5-label">I più apprezzati stasera</div>
-        ${top5.map((name,i) => {
+        ${top5.map(name => {
           const song = singers.find(s=>s.name===name)?.song || '';
-          const dots = ['①','②','③','④','⑤'];
           return `
-          <div class="summary-row">
-            <span class="s-rank" style="font-size:18px;opacity:.7">${dots[i]}</span>
+          <div class="top5-card">
+            <div class="top5-dot"></div>
             <div class="s-info">
               <div class="s-name">${name}</div>
               ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
