@@ -266,8 +266,8 @@ function renderVotesGrid(judgeName) {
   grid.innerHTML = `
     <div class="votes-grid-header">
       <div class="vg-singer">Cantante</div>
-      <div class="vg-score">Intonazione<br><span>1–10</span></div>
-      <div class="vg-score">Interpretazione<br><span>1–10</span></div>
+      <div class="vg-score">Inton.<br><span>1–10</span></div>
+      <div class="vg-score">Interp.<br><span>1–10</span></div>
     </div>
     ${singers.map((s,i) => {
       const v = existing[s.name] || {int:0, int2:0};
@@ -344,7 +344,7 @@ function onScoreBlur(input) {
 async function clearJudgeVotes() {
   const judgeName = selectedJudge;
   if (!judgeName) return;
-  if (!confirm(`Eliminare tutti i voti di ${judgeName} per questa serata?`)) return;
+  closeOverlay('overlay-clear-votes');
   // Cancella dal draft locale
   delete draftVotes[judgeName];
   // Salva su Firestore
@@ -476,6 +476,7 @@ async function computeRanking() {
     });
   } catch(e) {}
 
+  document.getElementById('btn-show-jury').style.display    = '';
   document.getElementById('btn-show-ranking').style.display = '';
   document.getElementById('btn-show-top3').style.display    = '';
 
@@ -505,23 +506,40 @@ async function computePublicBonus() {
 // ══════════════════════════════════════════════
 //  OVERLAY CLASSIFICA SERATA
 // ══════════════════════════════════════════════
-function openRankingOverlay() {
+function openRankingOverlay(mode = 'full') {
   if (!lastRanking) return;
   const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
   const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+  const isJury = mode === 'jury';
 
-  document.getElementById('ranking-overlay-title').textContent = `Classifica ${SERATA_LABELS[currentSerata]}`;
+  // Ordina per la metrica corretta
+  const sorted = [...serataScores].sort((a,b) => isJury ? b.tech - a.tech : b.total - a.total);
+
+  document.getElementById('ranking-overlay-title').textContent = isJury
+    ? `Giuria tecnica — ${SERATA_LABELS[currentSerata]}`
+    : `Classifica completa — ${SERATA_LABELS[currentSerata]}`;
+
   document.getElementById('ranking-overlay-sub').innerHTML =
-    `Giudici: ${judgesWithVotes.join(', ')}<br>`
-    + Object.entries(judgeStats).map(([n,s])=>
-        `<span style="opacity:.7">${n}: media ${s.mean}, ds ${s.ds}, range ${s.range}</span>`
-      ).join(' · ');
+    (isJury ? 'Solo voti giuria · Z-score per giudice · range 2–20' : 'Giuria tecnica + bonus pubblico · range 2–25')
+    + `<br><span style="opacity:.6;font-size:11px">Giudici: ${judgesWithVotes.join(', ')}</span>`;
 
-  document.getElementById('ranking-overlay-rows').innerHTML = `
+  document.getElementById('ranking-overlay-rows').innerHTML = isJury ? `
+    <div class="n-ranking-head" style="grid-template-columns:36px 1fr 50px">
+      <span>#</span><span>Cantante</span><span>Tec</span>
+    </div>
+    ${sorted.map((c,i) => `
+    <div class="n-ranking-row" style="grid-template-columns:36px 1fr 50px">
+      <span class="n-r-pos">${labels[i]||''}</span>
+      <div class="s-info">
+        <div class="s-name">${c.name}</div>
+        ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+      </div>
+      <span class="n-r-total">${c.tech}</span>
+    </div>`).join('')}` : `
     <div class="n-ranking-head">
       <span>#</span><span>Cantante</span><span>Tec</span><span>Pub</span><span>Tot</span>
     </div>
-    ${serataScores.map((c,i) => `
+    ${sorted.map((c,i) => `
     <div class="n-ranking-row">
       <span class="n-r-pos">${labels[i]||''}</span>
       <div class="s-info">
