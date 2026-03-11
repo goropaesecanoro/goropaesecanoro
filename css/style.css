@@ -537,7 +537,7 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   border-radius: 50%;
   background: var(--gold);
   flex-shrink: 0;
-  margin-top: 5px;
+  align-self: center;
 }
 /* s-info già definito globalmente — nome e canzone in colonna, allineati a sinistra */
 
