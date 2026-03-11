@@ -363,19 +363,10 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 
 
 /* ── Copyright — fondo schermata, non fixed ── */
-.copyright-bar {
-  font-size: 11px;
-  color: rgba(255,255,255,.22);
-  text-align: center;
-  letter-spacing: .5px;
-  font-family: 'DM Sans', sans-serif;
-  padding: 0 0 14px;
-  pointer-events: none;
-  width: 100%;
-}
+
 
 /* Nella voting screen nascondi — c'è già la submit bar */
-.voting-screen .copyright-bar { display: none; }
+.voting-screen 
 
 /* ── Hero — layout definitivo ── */
 .hero {
@@ -402,8 +393,23 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   margin: 0;
 }
 
-/* Copyright hero — ancorato al fondo della viewport */
-.hero .copyright-bar {
-  margin-top: auto !important;
-  padding-bottom: 8px !important;
+
+
+/* ── Copyright — fixed in fondo, sempre visibile, non interferisce ── */
+.copyright-bar {
+  position: fixed;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255,255,255,.18);
+  letter-spacing: .5px;
+  font-family: 'DM Sans', sans-serif;
+  pointer-events: none;
+  z-index: 1;
 }
+
+/* Submit bar e disclaimer hanno padding sufficiente per non sovrapporsi */
+.submit-bar { padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+#closed-random-note { padding-bottom: 24px; }
