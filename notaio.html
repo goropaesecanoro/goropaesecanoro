@@ -85,9 +85,9 @@
     <div id="votes-grid" class="votes-grid" style="display:none"></div>
 
     <!-- Salva voti giudice -->
-    <div id="votes-actions" style="display:none;margin-top:14px;display:none;gap:8px;flex-direction:column">
+    <div id="votes-actions" style="display:none;margin-top:14px">
       <button class="btn-primary" id="btn-save-votes" onclick="saveJudgeVotes()">💾 Salva voti giudice</button>
-      <button class="btn-secondary btn-danger" id="btn-clear-votes" onclick="clearJudgeVotes()">🗑️ Elimina tutti i voti</button>
+      <button class="btn-secondary btn-danger" onclick="openOverlay('overlay-clear-votes')">🗑️ Elimina tutti i voti</button>
     </div>
   </div>
 
@@ -95,13 +95,12 @@
   <div class="admin-section">
     <div class="admin-section-title">Calcolo classifica</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
-      Calcola la classifica tecnica con Z-score per giudice, poi aggiunge il bonus pubblico della serata corrente.
+      Calcola la classifica tecnica (Z-score per giudice). Disponibile sia la classifica della sola giuria tecnica, sia quella completa con il bonus pubblico della serata.
     </div>
-    <div class="admin-actions">
-      <button class="btn-primary" onclick="computeRanking()">⚡ Calcola classifica serata</button>
-      <button class="btn-secondary" id="btn-show-ranking" style="display:none" onclick="openRankingOverlay()">📊 Mostra classifica completa</button>
-      <button class="btn-secondary" id="btn-show-top3" style="display:none" onclick="showTop3Random()">🎭 Mostra top 3 per conduttori</button>
-    </div>
+    <button class="btn-primary" onclick="computeRanking()">⚡ Calcola classifica serata</button>
+    <button class="btn-secondary" id="btn-show-jury" style="display:none" onclick="openRankingOverlay('jury')">🏅 Classifica giuria tecnica</button>
+    <button class="btn-secondary" id="btn-show-ranking" style="display:none" onclick="openRankingOverlay('full')">📊 Classifica con bonus pubblico</button>
+    <button class="btn-secondary" id="btn-show-top3" style="display:none" onclick="showTop3Random()">🎭 Top 3 per conduttori</button>
   </div>
 
   <!-- ── 4. Classifica finale festival (serata 3) ── -->
@@ -110,11 +109,9 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Somma dei punteggi delle tre serate (tecnico normalizzato + bonus pubblico).
     </div>
-    <div class="admin-actions">
-      <button class="btn-primary" onclick="computeFestivalRanking()">🏆 Calcola classifica festival</button>
-      <button class="btn-secondary" id="btn-show-festival" style="display:none" onclick="openFestivalOverlay()">📋 Mostra classifica festival</button>
-      <button class="btn-secondary" id="btn-show-critica" style="display:none" onclick="openCriticaOverlay()">🎓 Premio della Critica</button>
-    </div>
+    <button class="btn-primary" onclick="computeFestivalRanking()">🏆 Calcola classifica festival</button>
+    <button class="btn-secondary" id="btn-show-festival" style="display:none" onclick="openFestivalOverlay()">📋 Classifica festival completa</button>
+    <button class="btn-secondary" id="btn-show-critica" style="display:none" onclick="openCriticaOverlay()">🎓 Premio della Critica</button>
   </div>
 
   <!-- Gestione -->
@@ -163,6 +160,17 @@
   </div>
 </div>
 
+<!-- ══ OVERLAY — CONFERMA ELIMINA VOTI ══════════ -->
+<div class="overlay" id="overlay-clear-votes" style="display:none">
+  <div class="overlay-box">
+    <h3>Sei sicuro?</h3>
+    <p>Tutti i voti del giudice selezionato verranno eliminati definitivamente.</p>
+    <button class="btn-overlay-ok" style="background:linear-gradient(135deg,#E85D5D,#a03030);color:#fff"
+      onclick="clearJudgeVotes()">Sì, elimina</button>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-clear-votes')">Annulla</button>
+  </div>
+</div>
+
 <!-- ══ OVERLAY — CLASSIFICA FESTIVAL ════════════ -->
 <div class="overlay" id="overlay-festival" style="display:none">
   <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:460px">
@@ -185,6 +193,7 @@
   </div>
 </div>
 
+<div class="copyright-bar">© 2026 Roberto Gennari</div>
 <script type="module" src="js/notaio.js"></script>
 </body>
 </html>
