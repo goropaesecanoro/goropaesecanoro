@@ -411,7 +411,6 @@
 .n-btn-stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 10px;
   width: 100%;
 }
@@ -419,6 +418,13 @@
 .n-btn-stack .btn-primary,
 .n-btn-stack .btn-secondary {
   width: 100%;
-  max-width: 300px;
+  max-width: none;
   margin-bottom: 0;
+  text-align: center;
+}
+
+#votes-actions.n-btn-stack .btn-primary,
+#votes-actions.n-btn-stack .btn-secondary {
+  width: 100%;
+  max-width: none;
 }
