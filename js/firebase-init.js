@@ -61,21 +61,6 @@ export async function sha256(msg) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-/** Logout forzato via ?logout nell'URL */
-if (new URLSearchParams(window.location.search).has('logout')) {
-  import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js")
-    .then(({ signOut, onAuthStateChanged }) => {
-      // Aspetta che Firebase sia pronto prima di fare signOut
-      onAuthStateChanged(auth, user => {
-        if (user) {
-          signOut(auth).then(() => window.location.replace(window.location.pathname));
-        } else {
-          window.location.replace(window.location.pathname);
-        }
-      });
-    });
-}
-
 /** Genera stelle decorative */
 export function generateStars() {
   const c = document.getElementById('stars');
