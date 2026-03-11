@@ -41,6 +41,8 @@ export const db   = getFirestore(app);
 
 /** Mostra una schermata, nasconde le altre */
 export function showScreen(id) {
+  // Sposta copyright sopra submit-bar solo nella voting screen
+  document.body.classList.toggle('has-submit', id === 'screen-voting');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
