@@ -157,11 +157,21 @@ function renderJudgesCompletion() {
 }
 
 function selectJudge(judgeName) {
+  // Secondo tap sullo stesso giudice — chiudi
+  if (selectedJudge === judgeName) {
+    selectedJudge = '';
+    syncHiddenSelector('');
+    renderJudgesPreview();
+    const grid    = document.getElementById('votes-grid');
+    const actions = document.getElementById('votes-actions');
+    if (grid)    grid.style.display    = 'none';
+    if (actions) actions.style.display = 'none';
+    return;
+  }
   selectedJudge = judgeName;
   syncHiddenSelector(judgeName);
   renderJudgesPreview();
   onJudgeSelected();
-  // Scroll alla griglia voti
   setTimeout(() => {
     document.getElementById('votes-grid')?.scrollIntoView({behavior:'smooth', block:'nearest'});
   }, 100);
@@ -271,25 +281,37 @@ function renderVotesGrid(judgeName) {
           <input class="score-input" type="number" min="1" max="10" inputmode="numeric" pattern="[0-9]*"
             data-singer="${s.name}" data-field="int"
             value="${v.int || ''}" placeholder="—"
-            oninput="onScoreInput(this)">
+            oninput="onScoreInput(this)" onblur="onScoreBlur(this)">
         </div>
         <div class="vg-score">
           <input class="score-input" type="number" min="1" max="10" inputmode="numeric" pattern="[0-9]*"
             data-singer="${s.name}" data-field="int2"
             value="${v.int2 || ''}" placeholder="—"
-            oninput="onScoreInput(this)">
+            oninput="onScoreInput(this)" onblur="onScoreBlur(this)">
         </div>
       </div>`;
     }).join('')}`;
 }
 
 function onScoreInput(input) {
-  let val = parseInt(input.value);
-  if (isNaN(val)) return;
-  if (val < 1)  { input.value = 1;  val = 1; }
-  if (val > 10) { input.value = 10; val = 10; }
+  // Rimuovi qualsiasi carattere non numerico
+  input.value = input.value.replace(/[^0-9]/g, '');
 
-  const judgeName = document.getElementById('judge-selector').value;
+  let val = parseInt(input.value);
+  if (isNaN(val) || input.value === '') {
+    // Valore vuoto — pulisci dal draft ma non bloccare l'input
+    const judgeName = selectedJudge || document.getElementById('judge-selector').value;
+    const singer = input.dataset.singer;
+    const field  = input.dataset.field;
+    if (draftVotes[judgeName]?.[singer]) draftVotes[judgeName][singer][field] = 0;
+    renderJudgesPreview();
+    return;
+  }
+  // Clamp solo se > 10 (non clampare mentre si sta digitando "1" per poi scrivere "10")
+  if (val > 10) { input.value = '10'; val = 10; }
+  // Non correggere a 1 subito — l'utente potrebbe stare ancora digitando
+  // Il clamp a min viene fatto al salvataggio e al blur
+  const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   const singer    = input.dataset.singer;
   const field     = input.dataset.field;
 
@@ -303,6 +325,20 @@ function onScoreInput(input) {
   row?.classList.toggle('complete', v.int > 0 && v.int2 > 0);
 
   renderJudgesCompletion();
+}
+
+function onScoreBlur(input) {
+  let val = parseInt(input.value);
+  if (!isNaN(val) && val < 1) { input.value = '1'; val = 1; }
+  if (!isNaN(val)) {
+    const judgeName = selectedJudge || document.getElementById('judge-selector').value;
+    if (judgeName && input.dataset.singer) {
+      if (!draftVotes[judgeName]) draftVotes[judgeName] = {};
+      if (!draftVotes[judgeName][input.dataset.singer]) draftVotes[judgeName][input.dataset.singer] = {int:0,int2:0};
+      draftVotes[judgeName][input.dataset.singer][input.dataset.field] = val;
+      renderJudgesPreview();
+    }
+  }
 }
 
 async function clearJudgeVotes() {
@@ -645,6 +681,7 @@ window.onJudgeSelected     = onJudgeSelected;
 window.onScoreInput        = onScoreInput;
 window.saveJudgeVotes      = saveJudgeVotes;
 window.clearJudgeVotes     = clearJudgeVotes;
+window.onScoreBlur         = onScoreBlur;
 window.computeRanking      = computeRanking;
 window.openRankingOverlay  = openRankingOverlay;
 window.showTop3Random      = showTop3Random;
