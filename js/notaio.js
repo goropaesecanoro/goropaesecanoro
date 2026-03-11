@@ -535,8 +535,26 @@ function assignOlympicRanks(sorted, scoreKey) {
   return result;
 }
 
-function openRankingOverlay(mode = 'full') {
-  if (!lastRanking) return;
+async function openRankingOverlay(mode = 'full') {
+  // Se lastRanking non è in memoria (es. dopo reload), caricalo da Firestore
+  if (!lastRanking) {
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+      if (!snap.exists()) { showToast('Calcola prima la classifica'); return; }
+      const data = snap.data();
+      // Ricostruisci lastRanking dalla struttura salvata
+      lastRanking = {
+        serataScores:     data.ranking || [],
+        judgeStats:       data.judgeStats || {},
+        judgesWithVotes:  Object.keys(data.judgeStats || {}),
+        criticRanking:    data.criticRanking || null,
+      };
+      // Mostra i pulsanti
+      document.getElementById('btn-show-jury').style.display    = '';
+      document.getElementById('btn-show-ranking').style.display = '';
+      document.getElementById('btn-show-top3').style.display    = '';
+    } catch(e) { showToast('Errore caricamento classifica'); return; }
+  }
   const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
   const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
   const isJury = mode === 'jury';
@@ -592,8 +610,18 @@ function openRankingOverlay(mode = 'full') {
 // ══════════════════════════════════════════════
 //  TOP 3 RANDOMIZZATI PER CONDUTTORI
 // ══════════════════════════════════════════════
-function showTop3Random() {
-  if (!lastRanking) return;
+async function showTop3Random() {
+  if (!lastRanking) {
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+      if (!snap.exists()) { showToast('Calcola prima la classifica'); return; }
+      const data = snap.data();
+      lastRanking = { serataScores: data.ranking||[], judgeStats: data.judgeStats||{}, judgesWithVotes: Object.keys(data.judgeStats||{}), criticRanking: data.criticRanking||null };
+      document.getElementById('btn-show-jury').style.display    = '';
+      document.getElementById('btn-show-ranking').style.display = '';
+      document.getElementById('btn-show-top3').style.display    = '';
+    } catch(e) { showToast('Calcola prima la classifica'); return; }
+  }
   const top3 = lastRanking.serataScores.slice(0,3)
     .map(c => c.name)
     .sort(() => Math.random() - 0.5);
@@ -659,23 +687,29 @@ async function computeFestivalRanking() {
 
 function openFestivalOverlay() {
   if (!festivalRanking) return;
-  const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+
+  const fmt = v => (typeof v === 'number' && v > 0) ? v.toFixed(2) : '—';
+  const ranked = assignOlympicRanks(
+    [...festivalRanking].sort((a,b) => b.total - a.total),
+    'total'
+  );
 
   document.getElementById('festival-overlay-rows').innerHTML = `
-    <div class="n-ranking-head" style="grid-template-columns:36px 1fr 40px 40px 40px 50px">
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 44px 44px 44px 56px">
       <span>#</span><span>Cantante</span><span>S1</span><span>S2</span><span>S3</span><span>Tot</span>
     </div>
-    ${festivalRanking.map((c,i) => `
-    <div class="n-ranking-row" style="grid-template-columns:36px 1fr 40px 40px 40px 50px">
-      <span class="n-r-pos">${labels[i]||''}</span>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 44px 44px 44px 56px">
+      <span class="n-r-pos">${c.rankLabel}</span>
       <div class="s-info">
         <div class="s-name">${c.name}</div>
         ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
       </div>
-      <span class="n-r-score" style="font-size:12px">${c.s[0]||'—'}</span>
-      <span class="n-r-score" style="font-size:12px">${c.s[1]||'—'}</span>
-      <span class="n-r-score" style="font-size:12px">${c.s[2]||'—'}</span>
-      <span class="n-r-total">${c.total}</span>
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[0])}</span>
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[1])}</span>
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[2])}</span>
+      <span class="n-r-total">${fmt(c.total)}</span>
     </div>`).join('')}`;
 
   openOverlay('overlay-festival');
@@ -687,14 +721,18 @@ async function openCriticaOverlay() {
     const criticRanking = snap.exists() ? snap.data().criticRanking : null;
     if (!criticRanking?.length) { showToast('Nessuna classifica critica disponibile'); return; }
 
-    const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+    const ranked = assignOlympicRanks(
+      [...criticRanking].sort((a,b) => b.score - a.score),
+      'score'
+    );
     document.getElementById('critica-overlay-rows').innerHTML =
-      criticRanking.map((c,i) => `
-      <div class="n-ranking-row" style="grid-template-columns:36px 1fr 50px">
-        <span class="n-r-pos">${labels[i]||''}</span>
+      ranked.map(c => `
+      <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 50px">
+        <span class="n-r-pos">${c.rankLabel}</span>
         <div class="s-info">
           <div class="s-name">${c.name}</div>
           ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+          ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
         </div>
         <span class="n-r-total">${c.score}</span>
       </div>`).join('');
