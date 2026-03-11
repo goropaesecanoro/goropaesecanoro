@@ -396,3 +396,25 @@
   background: #7ecb7e;
   opacity: 1;
 }
+
+/* ══ PULSANTI AZIONE — centrati nel pannello notaio ══ */
+#screen-notaio .admin-actions {
+  align-items: stretch;
+}
+
+#screen-notaio .admin-actions .btn-primary,
+#screen-notaio .admin-actions .btn-secondary {
+  width: 100%;
+  text-align: center;
+}
+
+#votes-actions {
+  flex-direction: column;
+  gap: 8px;
+}
+
+#votes-actions .btn-primary,
+#votes-actions .btn-secondary {
+  width: 100%;
+  text-align: center;
+}
