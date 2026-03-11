@@ -65,8 +65,40 @@ async function initNotaio() {
   await loadSingers();
   await loadDraftVotes();
   await loadJudges();
+  await checkExistingRanking();
 
   showScreen('screen-notaio');
+}
+
+async function checkExistingRanking() {
+  try {
+    // Serata corrente
+    const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+    if (snap.exists() && snap.data().ranking?.length > 0) {
+      const data = snap.data();
+      lastRanking = {
+        serataScores:    data.ranking,
+        judgeStats:      data.judgeStats || {},
+        judgesWithVotes: Object.keys(data.judgeStats || {}),
+        criticRanking:   data.criticRanking || null,
+      };
+      document.getElementById('btn-show-jury').style.display    = '';
+      document.getElementById('btn-show-ranking').style.display = '';
+      document.getElementById('btn-show-top3').style.display    = '';
+    }
+    // Festival (solo serata 3)
+    if (currentSerata === 3) {
+      const fsnap = await getDoc(doc(db,'jury_ranking','festival'));
+      if (fsnap.exists() && fsnap.data().ranking?.length > 0) {
+        festivalRanking = fsnap.data().ranking;
+        document.getElementById('btn-show-festival').style.display = '';
+        const csnap = await getDoc(doc(db,'jury_ranking','s3'));
+        if (csnap.exists() && csnap.data().criticRanking?.length > 0) {
+          document.getElementById('btn-show-critica').style.display = '';
+        }
+      }
+    }
+  } catch(e) {}
 }
 
 // ══════════════════════════════════════════════
