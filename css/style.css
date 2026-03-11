@@ -46,7 +46,7 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .hero { min-height: 100svh; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 24px 60px; position: relative; overflow: hidden; }
 .hero::before { content:''; position:absolute; inset:0; pointer-events:none; background: radial-gradient(ellipse 80% 55% at 50% 0%,rgba(201,168,76,.18) 0%,transparent 70%), radial-gradient(ellipse 50% 40% at 80% 90%,rgba(201,168,76,.07) 0%,transparent 60%); }
 
-.hero-badge { display:inline-block; background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.3); color:var(--gold); font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border-radius:100px; margin-bottom:20px; animation:fadeDown .6s ease both; }
+
 
 
 .hero-image-placeholder { width:100%; max-width:320px; height:160px; background:var(--surf2); border:2px dashed rgba(201,168,76,.2); border-radius:var(--r); margin-bottom:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); font-size:13px; animation:fadeDown .65s .05s ease both; }
@@ -109,7 +109,7 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .already-screen > p { color:var(--muted); font-size:14px; max-width:280px; margin:0 auto; }
 
 /* ── VOTING ── */
-.voting-screen { min-height:100svh; padding-bottom:130px; }
+.voting-screen { min-height:100svh; padding-bottom:100px; }
 .voting-header { position:sticky; top:0; z-index:100; background:rgba(13,13,24,.96); backdrop-filter:blur(12px); padding:14px 20px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
 .voting-header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .voting-header h2 { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; }
@@ -146,7 +146,7 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .singer-rank-badge { position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; background:var(--gold); color:var(--deep); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0); transition:opacity .2s,transform .25s cubic-bezier(.175,.885,.32,1.275); }
 .singer-card.selected .singer-rank-badge { opacity:1; transform:scale(1); }
 
-.submit-bar       { position:fixed; bottom:0; left:0; right:0; z-index:200; padding:14px 20px max(14px,env(safe-area-inset-bottom)); background:linear-gradient(to top,var(--deep) 55%,transparent); }
+
 .submit-bar-inner { max-width:480px; margin:0 auto; }
 .btn-submit { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; background:linear-gradient(135deg,var(--gold),var(--gold-dk)); color:var(--deep); font-family:'DM Sans',sans-serif; font-size:17px; font-weight:500; padding:17px; border-radius:100px; border:none; cursor:pointer; box-shadow:0 8px 28px rgba(201,168,76,.4); transition:transform .15s,opacity .25s; -webkit-appearance:none; }
 .btn-submit:disabled           { opacity:.25; box-shadow:none; pointer-events:none; }
@@ -358,8 +358,8 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 
 
 
-/* ── Copyright ── */
-/* Default: fixed in fondo per tutte le schermate flex */
+
+/* ── Copyright — sempre fixed in fondo ── */
 .copyright-bar {
   position: fixed;
   bottom: 6px;
@@ -373,18 +373,14 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   z-index: 1;
 }
 
-/* Dentro voting-screen: nel flusso, sotto i slot, sopra submit-bar */
-.voting-screen .copyright-bar {
-  position: static;
-  text-align: center;
-  font-size: 11px;
-  color: rgba(255,255,255,.18);
-  letter-spacing: .5px;
-  padding: 12px 0 8px;
-  pointer-events: none;
+/* Submit bar: staccata dalla firma */
+.submit-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 200;
+  padding: 14px 20px;
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--deep) 55%, transparent);
 }
 
-/* Submit bar con spazio sufficiente sopra la firma fixed */
-.submit-bar {
-  padding-bottom: max(28px, env(safe-area-inset-bottom));
-}
+/* Voting screen: spazio in fondo per submit-bar + firma */
