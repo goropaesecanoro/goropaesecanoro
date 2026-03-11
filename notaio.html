@@ -85,7 +85,7 @@
     <div id="votes-grid" class="votes-grid" style="display:none"></div>
 
     <!-- Salva voti giudice -->
-    <div id="votes-actions" style="display:none;margin-top:14px">
+    <div id="votes-actions" class="n-btn-stack" style="display:none;margin-top:14px">
       <button class="btn-primary" id="btn-save-votes" onclick="saveJudgeVotes()">💾 Salva voti giudice</button>
       <button class="btn-secondary btn-danger" onclick="openOverlay('overlay-clear-votes')">🗑️ Elimina tutti i voti</button>
     </div>
@@ -97,10 +97,12 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Calcola la classifica tecnica (Z-score per giudice). Disponibile sia la classifica della sola giuria tecnica, sia quella completa con il bonus pubblico della serata.
     </div>
-    <button class="btn-primary" onclick="computeRanking()">⚡ Calcola classifica serata</button>
-    <button class="btn-secondary" id="btn-show-jury" style="display:none" onclick="openRankingOverlay('jury')">🏅 Classifica giuria tecnica</button>
-    <button class="btn-secondary" id="btn-show-ranking" style="display:none" onclick="openRankingOverlay('full')">📊 Classifica con bonus pubblico</button>
-    <button class="btn-secondary" id="btn-show-top3" style="display:none" onclick="showTop3Random()">🎭 Top 3 per conduttori</button>
+    <div class="n-btn-stack">
+      <button class="btn-primary" onclick="computeRanking()">⚡ Calcola classifica serata</button>
+      <button class="btn-secondary" id="btn-show-jury" style="display:none" onclick="openRankingOverlay('jury')">🏅 Classifica giuria tecnica</button>
+      <button class="btn-secondary" id="btn-show-ranking" style="display:none" onclick="openRankingOverlay('full')">📊 Classifica con bonus pubblico</button>
+      <button class="btn-secondary" id="btn-show-top3" style="display:none" onclick="showTop3Random()">🎭 Top 3 per conduttori</button>
+    </div>
   </div>
 
   <!-- ── 4. Classifica finale festival (serata 3) ── -->
@@ -109,9 +111,11 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Somma dei punteggi delle tre serate (tecnico normalizzato + bonus pubblico).
     </div>
-    <button class="btn-primary" onclick="computeFestivalRanking()">🏆 Calcola classifica festival</button>
-    <button class="btn-secondary" id="btn-show-festival" style="display:none" onclick="openFestivalOverlay()">📋 Classifica festival completa</button>
-    <button class="btn-secondary" id="btn-show-critica" style="display:none" onclick="openCriticaOverlay()">🎓 Premio della Critica</button>
+    <div class="n-btn-stack">
+      <button class="btn-primary" onclick="computeFestivalRanking()">🏆 Calcola classifica festival</button>
+      <button class="btn-secondary" id="btn-show-festival" style="display:none" onclick="openFestivalOverlay()">📋 Classifica festival completa</button>
+      <button class="btn-secondary" id="btn-show-critica" style="display:none" onclick="openCriticaOverlay()">🎓 Premio della Critica</button>
+    </div>
   </div>
 
   <!-- Gestione -->
