@@ -40,11 +40,7 @@ export const db   = getFirestore(app);
 // ── Helpers condivisi ─────────────────────────
 
 /** Mostra una schermata, nasconde le altre */
-// Schermate scrollabili — copyright nel flusso invece che fixed
-const SCROLLABLE_SCREENS = new Set(['screen-voting', 'screen-admin']);
-
 export function showScreen(id) {
-  document.body.classList.toggle('screen-scrollable', SCROLLABLE_SCREENS.has(id));
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
