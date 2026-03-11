@@ -6,6 +6,30 @@
 <title>Goro Paese Canoro 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script>
+  // Logout forzato via ?logout — eseguito prima di tutto il resto
+  if (new URLSearchParams(window.location.search).has('logout')) {
+    // Importa Firebase Auth e fa signOut, poi ricarica senza il parametro
+    var _fbApp = null;
+    Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js')
+    ]).then(([{initializeApp}, {getAuth, signOut}]) => {
+      const app  = initializeApp({
+        apiKey:            "AIzaSyAFvDuG0glouoEhN1Hqrd68c6F30A11su4",
+        authDomain:        "goro-paese-canoro-2026.firebaseapp.com",
+        projectId:         "goro-paese-canoro-2026",
+        storageBucket:     "goro-paese-canoro-2026.firebasestorage.app",
+        messagingSenderId: "782054899768",
+        appId:             "1:782054899768:web:84473d4d299c4f42fa26cd"
+      }, 'logout-instance');
+      const auth = getAuth(app);
+      signOut(auth).finally(() => {
+        window.location.replace(window.location.pathname);
+      });
+    });
+  }
+</script>
 <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfnToUsAAAAAJZ_P6iO-8dzp1cF8g6pprriUKW8" async defer></script>
 </head>
 <body>
