@@ -76,16 +76,10 @@
   <div class="admin-section">
     <div class="admin-section-title">Inserimento voti giuria</div>
 
-    <!-- Selettore giudice -->
-    <div class="n-field-group" style="margin-bottom:14px">
-      <label class="n-label">Giudice</label>
-      <select id="judge-selector" class="n-select" onchange="onJudgeSelected()">
-        <option value="">— Seleziona giudice —</option>
-      </select>
-    </div>
-
-    <!-- Stato completamento giudici -->
-    <div id="judges-completion" class="judges-completion"></div>
+    <!-- Select nascosto — usato internamente, lista interattiva sopra -->
+    <select id="judge-selector" style="display:none" onchange="onJudgeSelected()">
+      <option value="">—</option>
+    </select>
 
     <!-- Griglia voti cantanti -->
     <div id="votes-grid" class="votes-grid" style="display:none"></div>
