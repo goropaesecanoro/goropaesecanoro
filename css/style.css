@@ -352,55 +352,14 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 }
 
 
-/* ── Copyright — non sovrasta submit bar ── */
 
 
-/* Nelle schermate flex (hero, chiusa, grazie) resta fixed */
-.flex-screen 
-
-
-
-
-
-/* ── Copyright — fondo schermata, non fixed ── */
-
-
-/* Nella voting screen nascondi — c'è già la submit bar */
-.voting-screen 
-
-/* ── Hero — layout definitivo ── */
-.hero {
-  justify-content: flex-start !important;
-  padding-top: 24px !important;
-  padding-bottom: 20px !important;
-  gap: 6px !important;
-}
-
-.hero-image {
-  width: min(320px, 85vw) !important;
-  max-height: 40vh !important;
-  object-fit: contain;
-  margin-bottom: 0;
-  filter: drop-shadow(0 4px 20px rgba(0,0,0,.35));
-}
-
-.hero-edition {
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  opacity: .6;
-  margin: 0;
-}
-
-
-
-/* ── Copyright — fixed in fondo, sempre visibile, non interferisce ── */
+/* ── Copyright ── */
+/* Default: fixed in fondo per schermate a schermata intera (hero, chiusa, grazie ecc.) */
 .copyright-bar {
   position: fixed;
   bottom: 6px;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   text-align: center;
   font-size: 11px;
   color: rgba(255,255,255,.18);
@@ -410,6 +369,42 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   z-index: 1;
 }
 
-/* Submit bar e disclaimer hanno padding sufficiente per non sovrapporsi */
-.submit-bar { padding-bottom: max(30px, env(safe-area-inset-bottom)); }
-#closed-random-note { padding-bottom: 24px; }
+/* Nelle schermate scrollabili (voting, admin) non è fixed:
+   viene renderizzato nel flusso normale in fondo alla pagina */
+.voting-screen ~ .copyright-bar,
+.admin-screen ~ .copyright-bar {
+  position: static;
+  display: block;
+  padding: 16px 0 20px;
+  margin-top: 8px;
+}
+
+/* Submit bar: abbastanza spazio da non coprire la firma */
+.submit-bar {
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
+
+/* ── Copyright ── */
+.copyright-bar {
+  position: fixed;
+  bottom: 6px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255,255,255,.18);
+  letter-spacing: .5px;
+  font-family: 'DM Sans', sans-serif;
+  pointer-events: none;
+  z-index: 1;
+}
+/* Schermate scrollabili: copyright nel flusso, non fixed */
+body.screen-scrollable .copyright-bar {
+  position: static;
+  padding: 16px 0 24px;
+  margin-top: 4px;
+  display: block;
+}
+/* Submit bar: spazio per non coprire la firma quando fixed */
+.submit-bar {
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
