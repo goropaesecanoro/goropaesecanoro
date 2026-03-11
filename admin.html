@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Admin — Goro Paese Canoro 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="toast"  id="toast"></div>
+
+<!-- ══ LOADING ══════════════════════════════════ -->
+<div class="screen flex-screen loading-screen active" id="screen-loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Verifica accesso…</div>
+</div>
+
+<!-- ══ LOGIN ═════════════════════════════════════ -->
+<div class="screen flex-screen admin-login-screen" id="screen-admin-login">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;width:100%">
+    <div style="font-size:48px;margin-bottom:20px">🎛️</div>
+    <h2>Area <span>Admin</span></h2>
+    <p>Accedi con il tuo account Google autorizzato per gestire la serata.</p>
+    <button class="btn-auth btn-google" style="max-width:300px;margin-top:8px" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Accedi con Google
+    </button>
+    <button class="btn-ghost" style="margin-top:16px" onclick="window.location.href='index.html'">← Torna al sito</button>
+  </div>
+</div>
+
+<!-- ══ ADMIN PANEL ════════════════════════════════ -->
+<div class="screen admin-screen" id="screen-admin">
+
+  <!-- Header -->
+  <div class="admin-top">
+    <h2>Pannello <span style="color:var(--gold)">Admin</span></h2>
+    <span class="badge-admin">Admin</span>
+    <div class="user-chip">
+      <div class="user-avatar" id="admin-user-initials">?</div>
+      <span id="admin-user-name">…</span>
+    </div>
+    <button class="btn-icon" onclick="refreshRanking()" title="Aggiorna">↻</button>
+  </div>
+
+  <!-- ── 1. Serata attiva ── -->
+  <div class="admin-section">
+    <div class="admin-section-title">Serata attiva</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surf2);border-radius:var(--r);padding:16px 18px;">
+      <div>
+        <div style="font-size:15px;font-weight:500" id="current-serata-label">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Serata corrente per il pubblico</div>
+      </div>
+      <button class="btn-secondary" style="width:auto;padding:10px 18px;border-radius:100px;font-size:14px" onclick="openSerataChooser()">
+        🔄 Cambia serata
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 2. Controlli votazione ── -->
+  <div class="admin-section">
+    <div class="admin-section-title">Controlli votazione</div>
+    <div class="switches-grid">
+      <div class="switch-row">
+        <div class="switch-info">
+          <span class="switch-label">Votazioni aperte</span>
+          <span class="switch-desc">Abilita o blocca la votazione per il pubblico</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-voto" onchange="toggleVoto(event)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="switch-row" id="toggle-top5-wrap">
+        <div class="switch-info">
+          <span class="switch-label">Mostra top 5 al pubblico</span>
+          <span class="switch-desc">Visibile solo a voto chiuso, in ordine casuale</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-top5" onchange="toggleTop5(event)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="switch-row" id="toggle-svela-wrap">
+        <div class="switch-info">
+          <span class="switch-label">Svela classifica finale</span>
+          <span class="switch-desc">Mostra la classifica reale al pubblico (solo Finale)</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-svela" onchange="toggleSvela(event)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Classifica live ── -->
+  <div class="admin-section">
+    <div class="admin-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Classifica live serata</span>
+      <button class="btn-ghost" style="font-size:12px;padding:4px 8px" onclick="refreshRanking()">↻ Aggiorna</button>
+    </div>
+    <div class="stat-card" style="margin-bottom:12px">
+      <div class="stat-value" id="stat-votes">–</div>
+      <div class="stat-label" id="stat-label">Voti totali</div>
+    </div>
+    <div class="ranking-card">
+      <div class="ranking-head">
+        <span>#</span><span>Cantante</span><span style="text-align:right">Punti</span>
+      </div>
+      <div id="admin-ranking-rows"></div>
+    </div>
+  </div>
+
+  <!-- ── 4. Classifica finale Z-score (solo serata 3) ── -->
+  <div class="admin-section" id="btn-zscore-wrap" style="display:none">
+    <div class="admin-section-title">Classifica finale normalizzata</div>
+    <div style="background:var(--surf2);border-radius:var(--r);padding:16px 18px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+        Calcola la classifica usando la normalizzazione Z-score sulle tre serate. Disponibile solo a votazioni chiuse.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-secondary btn-reveal" onclick="computeAndShowFinalRanking()" style="border-radius:100px">
+          ⚙️ Calcola classifica (ricalcola da zero)
+        </button>
+        <button class="btn-secondary" onclick="showFinalRanking()" style="border-radius:100px">
+          👁 Mostra classifica salvata
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. Azioni ── -->
+  <div class="admin-section">
+    <div class="admin-section-title">Gestione</div>
+    <div class="admin-actions">
+      <button class="btn-secondary" onclick="openSingersEditor(1)">🎤 Modifica cantanti Serata 1</button>
+      <button class="btn-secondary" onclick="openSingersEditor(2)">🎤 Modifica cantanti Serata 2</button>
+      <button class="btn-secondary" onclick="exportCSV()">📥 Esporta CSV serata corrente</button>
+      <button class="btn-secondary btn-danger" onclick="confirmReset()">🗑️ Azzera voti serata corrente</button>
+      <button class="btn-secondary" onclick="signOutAdmin()">← Esci dall'area admin</button>
+    </div>
+  </div>
+
+</div><!-- /screen-admin -->
+
+<!-- ══ OVERLAY — CAMBIO SERATA ════════════════════ -->
+<div class="overlay" id="overlay-serata" style="display:none">
+  <div class="overlay-box">
+    <h3>Cambia serata</h3>
+    <p>Seleziona la serata da attivare per il pubblico. Richiede conferma.</p>
+    <div class="serata-switcher" style="margin-bottom:20px">
+      <button class="btn-serata" id="ov-s1" onclick="selectPendingSerata(1)">Serata 1</button>
+      <button class="btn-serata" id="ov-s2" onclick="selectPendingSerata(2)">Serata 2</button>
+      <button class="btn-serata" id="ov-s3" onclick="selectPendingSerata(3)">Finale</button>
+    </div>
+    <button class="btn-overlay-ok" id="btn-confirm-serata" onclick="confirmSerataChange()" disabled>
+      ✓ Conferma cambio
+    </button>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-serata')">Annulla</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY — MODIFICA CANTANTI ════════════════ -->
+<div class="overlay" id="overlay-singers" style="display:none">
+  <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:380px">
+    <h3>Modifica cantanti</h3>
+    <p>Modifica i nomi e salva. Le modifiche saranno visibili ai votanti.</p>
+    <div class="singers-editor" id="singers-editor-s1"></div>
+    <div class="singers-editor" id="singers-editor-s2"></div>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-singers')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY — CLASSIFICA FINALE Z-SCORE ════════ -->
+<div class="overlay" id="overlay-final" style="display:none">
+  <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:420px">
+    <h3 style="color:var(--gold)">🏆 Classifica finale</h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:1px">
+      Votazioni del pubblico
+    </p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px;opacity:.7">
+      Punteggi normalizzati Z-score — non include la giuria tecnica
+    </p>
+    <div class="ranking-card" style="margin-bottom:16px">
+      <div class="ranking-head" style="grid-template-columns:40px 1fr 90px">
+        <span>#</span><span>Cantante</span><span style="text-align:right">Z-tot</span>
+      </div>
+      <div id="admin-final-rows"></div>
+    </div>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-final')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY — RESET ════════════════════════════ -->
+<div class="overlay" id="overlay-reset" style="display:none">
+  <div class="overlay-box">
+    <h3>Sei sicuro?</h3>
+    <p>I voti della serata corrente verranno eliminati definitivamente.</p>
+    <button class="btn-overlay-ok" style="background:linear-gradient(135deg,#E85D5D,#a03030);color:#fff" onclick="resetVotes()">
+      Sì, azzera
+    </button>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-reset')">Annulla</button>
+  </div>
+</div>
+
+
+<!-- ══ COPYRIGHT ════════════════════════════════ -->
+<div class="copyright-bar">© 2026 Roberto Gennari</div>
+
+<script type="module">
+  import { generateStars, showScreen } from './js/firebase-init.js';
+  import './js/auth.js';
+  import { initAdminApp } from './js/admin.js';
+  window.showScreen = showScreen;
+  generateStars();
+  initAdminApp();
+</script>
+</body>
+</html>

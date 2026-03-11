@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Goro Paese Canoro 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://www.google.com/recaptcha/enterprise.js?render=6LfnToUsAAAAAJZ_P6iO-8dzp1cF8g6pprriUKW8" async defer></script>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="toast"  id="toast"></div>
+
+<!-- ══ LOADING ══════════════════════════════════ -->
+<div class="screen flex-screen loading-screen active" id="screen-loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Caricamento…</div>
+</div>
+
+<!-- ══ HERO ═════════════════════════════════════ -->
+<div class="screen flex-screen hero" id="screen-hero">
+  <img src="img/locandina.png" alt="2° Goro Paese Canoro Festival" class="hero-image">
+  <div class="hero-edition">Edizione 2026</div>
+  <div class="serata-chip">
+    <div class="serata-dot"></div>
+    <span id="hero-serata-label">Caricamento…</span>
+  </div>
+  <div class="hero-cta">
+    <button class="btn-auth btn-google" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Accedi con Google
+    </button>
+    <div class="auth-divider">oppure</div>
+    <button class="btn-auth btn-phone" onclick="showPhoneAuth()">
+      📱 Accedi con numero di telefono
+    </button>
+  </div>
+  <p class="hero-note">Un accesso = un voto per serata &nbsp;•&nbsp; Dati protetti</p>
+</div>
+
+<!-- ══ PHONE AUTH ════════════════════════════════ -->
+<div class="screen flex-screen phone-screen" id="screen-phone">
+  <div id="phone-step-1">
+    <h2>Il tuo <span>numero</span></h2>
+    <p>Inserisci il numero di cellulare. Riceverai un SMS con il codice.</p>
+    <div class="phone-input-wrap">
+      <input class="phone-prefix" type="tel" id="phone-prefix" value="+39" maxlength="4">
+      <input class="field-input"  type="tel" id="phone-number" placeholder="3xx xxx xxxx" maxlength="12">
+    </div>
+    <div id="recaptcha-container" style="position:absolute;visibility:hidden;height:0;overflow:hidden"></div>
+    <button class="btn-primary" id="btn-send-sms" onclick="sendSMS()">Invia SMS</button>
+    <button class="btn-ghost" onclick="showScreen('screen-hero')">← Torna indietro</button>
+  </div>
+  <div id="phone-step-2" style="display:none">
+    <h2>Codice <span>SMS</span></h2>
+    <p id="otp-sent-to">Inserisci il codice a 6 cifre.</p>
+    <div class="otp-wrap">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-0">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-1">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-2">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-3">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-4">
+      <input class="otp-digit" type="tel" maxlength="1" id="otp-5">
+    </div>
+    <button class="btn-primary" id="btn-verify-otp" onclick="verifyOTP()">Verifica e accedi</button>
+    <button class="btn-ghost" onclick="backToPhoneStep1()">← Cambia numero</button>
+  </div>
+</div>
+
+<!-- ══ VOTAZIONI CHIUSE ══════════════════════════ -->
+<div class="screen flex-screen closed-screen" id="screen-closed">
+  <div class="closed-icon">🎙️</div>
+  <h2 class="closed-title">Votazioni <span>chiuse</span></h2>
+  <p class="closed-sub">Le votazioni per questa serata sono terminate. Grazie per la partecipazione!</p>
+  <div id="closed-dynamic"></div>
+  <div id="closed-random-note" style="display:none;margin-top:16px;font-size:12px;color:var(--muted);text-align:center;max-width:280px;line-height:1.6">
+    I preferiti sono mostrati in <strong style="color:var(--gold)">ordine casuale</strong> — non riflettono la classifica reale.<br>
+    Non includono le votazioni della giuria tecnica.<br>
+    <span style="opacity:.7"><a onclick="location.reload()" style="color:var(--gold);cursor:pointer;text-decoration:underline">🔄 Ricarica la pagina</a> per vedere un ordine diverso</span>
+  </div>
+</div>
+
+<!-- ══ CLASSIFICA SVELATA ════════════════════════ -->
+<div class="screen flex-screen" id="screen-reveal"
+     style="min-height:100svh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(201,168,76,.15) 0%,transparent 70%)"></div>
+  <div style="font-size:64px;margin-bottom:16px;animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both">🏆</div>
+  <h2 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;animation:fadeDown .5s .1s ease both">
+    Classifica <span style="color:var(--gold)">Finale</span>
+  </h2>
+  <p style="font-size:13px;margin-top:8px;margin-bottom:20px;animation:fadeDown .5s .15s ease both;max-width:300px;text-align:center;line-height:1.6;color:var(--muted)">
+    Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
+    <span style="font-size:11px;opacity:.7">Non include le votazioni della giuria tecnica</span>
+  </p>
+  <div class="summary-table" id="reveal-ranking" style="animation:fadeUp .5s .3s ease both"></div>
+</div>
+
+<!-- ══ GIÀ VOTATO ════════════════════════════════ -->
+<div class="screen flex-screen already-screen" id="screen-already">
+  <div style="font-size:64px;margin-bottom:20px">🎵</div>
+  <h2>Voto <span>registrato!</span></h2>
+  <p>Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.</p>
+  <div class="summary-table" id="already-summary"></div>
+</div>
+
+<!-- ══ VOTING ════════════════════════════════════ -->
+<div class="screen voting-screen" id="screen-voting">
+
+  <!-- Header sticky -->
+  <div class="voting-header">
+    <div class="voting-header-top">
+      <h2>I tuoi <span>5 preferiti</span></h2>
+      <div class="user-chip">
+        <div class="user-avatar" id="user-initials">?</div>
+        <span id="user-name-short">…</span>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-label">
+      <span id="progress-text">0 di 5 selezionati</span>
+      <span id="serata-label-voting" style="color:var(--gold)"></span>
+    </div>
+  </div>
+
+  <!-- 1. Cantanti da selezionare (IN CIMA) -->
+  <div class="singers-section">
+    <div class="section-title">Tocca i cantanti in ordine di preferenza, dal più al meno amato</div>
+    <div style="font-size:12px;color:var(--muted);padding:0 4px 12px;line-height:1.5;text-align:center">
+      Puoi correggere le scelte toccando di nuovo un nome selezionato oppure usando la <strong>✕</strong> nella classifica in basso
+    </div>
+    <div class="singers-grid" id="singers-grid"></div>
+  </div>
+
+  <!-- 2. Riepilogo classifica (SOTTO) -->
+  <div class="slots-section">
+    <div class="section-title">La tua classifica</div>
+    <div class="slots" id="slots"></div>
+  </div>
+
+  <!-- Submit bar -->
+  <div class="submit-bar" style="padding-bottom: env(safe-area-inset-bottom, 0)">
+    <div class="submit-bar-inner">
+      <button class="btn-submit" id="btn-submit" disabled onclick="showConfirmOverlay()">
+        Conferma il voto 🎤
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OVERLAY CONFERMA VOTO ═════════════════════ -->
+<div class="overlay" id="overlay-confirm-vote" style="display:none">
+  <div class="overlay-box">
+    <div style="font-size:36px;margin-bottom:12px">🎤</div>
+    <h3>Confermi il tuo voto?</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Stai per inviare questa classifica:</p>
+    <div id="confirm-vote-preview" style="margin:12px 0 16px;width:100%"></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      Puoi ancora tornare indietro e modificare le tue scelte prima di confermare.
+    </p>
+    <button class="btn-overlay-ok" id="btn-confirm-send" onclick="confirmAndSend()">
+      ✓ Sì, invia il mio voto
+    </button>
+    <button class="btn-overlay-cancel" onclick="closeConfirmOverlay()">← Modifica le scelte</button>
+  </div>
+</div>
+
+<!-- ══ THANK YOU ══════════════════════════════════ -->
+<div class="screen flex-screen thankyou-screen" id="screen-thanks">
+  <div class="check-circle">✓</div>
+  <h2 class="thankyou-title">Grazie<br><span>per aver votato!</span></h2>
+  <p class="thankyou-sub">Il tuo voto è stato registrato con successo.</p>
+  <div class="summary-table" id="thanks-summary"></div>
+</div>
+
+
+<!-- ══ COPYRIGHT ════════════════════════════════ -->
+<div class="copyright-bar">© 2026 Roberto Gennari</div>
+
+<script type="module">
+  import { generateStars, showScreen } from './js/firebase-init.js';
+  import './js/auth.js';
+  import { initVoteApp } from './js/vote.js';
+  window.showScreen = showScreen;
+  generateStars();
+  initVoteApp();
+</script>
+</body>
+</html>
