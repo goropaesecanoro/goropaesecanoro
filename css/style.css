@@ -402,7 +402,8 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   margin: 0;
 }
 
-/* Copyright dentro hero — non usa margin-top:auto, sta sotto il contenuto */
+/* Copyright hero — ancorato al fondo della viewport */
 .hero .copyright-bar {
-  margin-top: 12px !important;
+  margin-top: auto !important;
+  padding-bottom: 8px !important;
 }
