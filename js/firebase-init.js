@@ -19,12 +19,16 @@ const FIREBASE_CONFIG = {
 // Modificali anche qui come backup, ma la fonte principale è Firestore
 export const DEFAULT_SINGERS = {
   1: [
-    "Cantante S1-1", "Cantante S1-2", "Cantante S1-3",
-    "Cantante S1-4", "Cantante S1-5", "Cantante S1-6", "Cantante S1-7"
+    {name:"Cantante S1-1", song:"Canzone 1"}, {name:"Cantante S1-2", song:"Canzone 2"},
+    {name:"Cantante S1-3", song:"Canzone 3"}, {name:"Cantante S1-4", song:"Canzone 4"},
+    {name:"Cantante S1-5", song:"Canzone 5"}, {name:"Cantante S1-6", song:"Canzone 6"},
+    {name:"Cantante S1-7", song:"Canzone 7"}
   ],
   2: [
-    "Cantante S2-1", "Cantante S2-2", "Cantante S2-3",
-    "Cantante S2-4", "Cantante S2-5", "Cantante S2-6", "Cantante S2-7"
+    {name:"Cantante S2-1", song:"Canzone 1"}, {name:"Cantante S2-2", song:"Canzone 2"},
+    {name:"Cantante S2-3", song:"Canzone 3"}, {name:"Cantante S2-4", song:"Canzone 4"},
+    {name:"Cantante S2-5", song:"Canzone 5"}, {name:"Cantante S2-6", song:"Canzone 6"},
+    {name:"Cantante S2-7", song:"Canzone 7"}
   ]
 };
 

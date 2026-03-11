@@ -80,14 +80,17 @@ async function loadAllSingers() {
       getDoc(doc(db,'singers','s1')),
       getDoc(doc(db,'singers','s2'))
     ]);
-    if (s1.exists()) singers[1] = s1.data().list;
-    if (s2.exists()) singers[2] = s2.data().list;
+    if (s1.exists()) singers[1] = s1.data().list.map(s => typeof s==='string' ? {name:s,song:''} : s);
+    if (s2.exists()) singers[2] = s2.data().list.map(s => typeof s==='string' ? {name:s,song:''} : s);
   } catch(e) {}
 }
 
 async function saveSingers(serata) {
-  const inputs = document.querySelectorAll(`#singers-editor-s${serata} .singer-edit-input`);
-  const list   = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+  const rows = document.querySelectorAll(`#singers-editor-s${serata} .singer-edit-row`);
+  const list = Array.from(rows).map(row => ({
+    name: row.querySelector('.singer-edit-name').value.trim(),
+    song: row.querySelector('.singer-edit-song').value.trim()
+  })).filter(r => r.name);
   if (list.length === 0) { showToast('Inserisci almeno un cantante'); return; }
   await setDoc(doc(db,'singers',`s${serata}`), { list, updatedAt: serverTimestamp() });
   singers[serata] = list;
@@ -99,10 +102,15 @@ function renderSingersEditor(serata) {
   const container = document.getElementById(`singers-editor-s${serata}`);
   if (!container) return;
   const list = singers[serata];
-  container.innerHTML = list.map((name,i) => `
+  // Normalizza: accetta sia stringhe che oggetti {name, song}
+  const normalized = list.map(s => typeof s === 'string' ? {name:s, song:''} : s);
+  container.innerHTML = normalized.map((s,i) => `
     <div class="singer-edit-row">
       <span class="singer-edit-num">${i+1}</span>
-      <input class="singer-edit-input" type="text" value="${name}" placeholder="Nome cantante">
+      <div class="singer-edit-fields">
+        <input class="singer-edit-name" type="text" value="${s.name}" placeholder="Nome cantante">
+        <input class="singer-edit-song" type="text" value="${s.song||''}" placeholder="♪ Titolo canzone">
+      </div>
     </div>`).join('') + `
     <button class="btn-save-singers" onclick="saveSingersAdmin(${serata})">
       💾 Salva cantanti Serata ${serata}
@@ -256,7 +264,7 @@ async function refreshRanking() {
 // ── Helpers statistici ───────────────────────
 function getRawScores(votes, singerList) {
   const raw = {};
-  singerList.forEach(s => raw[s] = 0);
+  singerList.forEach(s => raw[typeof s==='string'?s:s.name] = 0);
   votes.forEach(({vote}) =>
     vote?.forEach((name,i) => { if (raw[name] !== undefined) raw[name] += POINTS[i]; })
   );
@@ -350,9 +358,9 @@ async function computeAndShowFinalRanking() {
     const w3 = Math.sqrt(n3 / nMax);
 
     // Combina: clip + peso per ogni serata
-    const allSingers = [...singers[1], ...singers[2]];
+    const allSingers = [...singers[1], ...singers[2]].map(s=>s.name);
     const combined = allSingers.map(name => {
-      const inS1    = singers[1].includes(name);
+      const inS1    = singers[1].map(s=>s.name).includes(name);
       const zs1     = inS1 ? clip(z1[name]||0) * w1 : null;
       const zs2     = !inS1 ? clip(z2[name]||0) * w2 : null;
       const zs3     = clip(z3[name]||0) * w3;
