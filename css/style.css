@@ -328,21 +328,7 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 
 
 
-/* ── Copyright bar ── */
-.copyright-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 11px;
-  color: rgba(255,255,255,.25);
-  padding: 6px 0 8px;
-  pointer-events: none;
-  z-index: 10;
-  letter-spacing: .5px;
-  font-family: 'DM Sans', sans-serif;
-}
+
 
 
 
@@ -378,21 +364,27 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 }
 
 /* ── Copyright — non sovrasta submit bar ── */
-.copyright-bar {
-  position: relative !important;
-  margin-top: auto;
-  padding: 12px 0 16px;
-}
+
 
 /* Nelle schermate flex (hero, chiusa, grazie) resta fixed */
-.flex-screen .copyright-bar {
-  position: fixed !important;
-  bottom: 0; left: 0; right: 0;
-  padding: 6px 0 8px;
-  margin-top: 0;
+.flex-screen 
+
+
+
+
+
+/* ── Copyright — fondo schermata, non fixed ── */
+.copyright-bar {
+  font-size: 11px;
+  color: rgba(255,255,255,.22);
+  text-align: center;
+  letter-spacing: .5px;
+  font-family: 'DM Sans', sans-serif;
+  padding: 0 0 14px;
+  margin-top: auto;
+  pointer-events: none;
+  width: 100%;
 }
 
-/* ── Submit bar sopra il copyright ── */
-.submit-bar { margin-bottom: 28px; }
-.copyright-bar { z-index: 5 !important; }
-.btn-submit { position: relative; z-index: 6; }
+/* Nella voting screen nascondi — c'è già la submit bar */
+.voting-screen .copyright-bar { display: none; }
