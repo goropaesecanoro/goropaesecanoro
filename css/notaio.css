@@ -265,7 +265,7 @@
 /* ── Classifica notaio ── */
 .n-ranking-head {
   display: grid;
-  grid-template-columns: 36px 1fr 40px 40px 50px;
+  grid-template-columns: 44px 1fr 40px 40px 50px;
   padding: 10px 14px;
   font-size: 10px;
   text-transform: uppercase;
@@ -275,11 +275,13 @@
   text-align: center;
 }
 
-.n-ranking-head span:nth-child(2) { text-align: left; }
+/* # allineato a sinistra come la colonna pos, Cantante a sinistra */
+.n-ranking-head span:first-child { text-align: left; }
+.n-ranking-head span:nth-child(2) { text-align: left; padding-left: 2px; }
 
 .n-ranking-row {
   display: grid;
-  grid-template-columns: 36px 1fr 40px 40px 50px;
+  grid-template-columns: 44px 1fr 40px 40px 50px;
   padding: 12px 14px;
   border-bottom: 1px solid rgba(255,255,255,.04);
   align-items: center;
