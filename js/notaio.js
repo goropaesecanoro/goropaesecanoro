@@ -63,8 +63,8 @@ async function initNotaio() {
     currentSerata === 3 ? '' : 'none';
 
   await loadSingers();
-  await loadJudges();
   await loadDraftVotes();
+  await loadJudges();
 
   showScreen('screen-notaio');
 }
@@ -109,43 +109,59 @@ async function loadJudges() {
   renderJudgeSelector();
 }
 
+let selectedJudge = '';
+
 function renderJudgesPreview() {
   const el = document.getElementById('judges-list-preview');
   if (judges.length === 0) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px">Nessun giudice configurato — usa ✎ Modifica</div>';
     return;
   }
-  el.innerHTML = judges.map(j => `
-    <div class="judge-chip ${j.isCritic ? 'critic' : ''}">
-      ${j.isCritic ? '⭐ ' : ''}${j.name}
-      ${j.isCritic ? '<span class="critic-badge">Critica</span>' : ''}
-    </div>`).join('');
+  el.innerHTML = judges.map(j => {
+    const votes  = draftVotes[j.name] || {};
+    const filled = singers.filter(s => { const v=votes[s.name]; return v&&v.int>0&&v.int2>0; }).length;
+    const total  = singers.length;
+    const done   = filled === total && total > 0;
+    const sel    = selectedJudge === j.name;
+    return `<div class="judge-select-row ${done ? 'done' : ''} ${sel ? 'selected' : ''}"
+      onclick="selectJudge('${j.name.replace(/'/g,"\'")}')">
+      <span class="completion-dot ${done ? 'done' : ''}"></span>
+      <div class="judge-select-info">
+        <span class="judge-select-name">${j.isCritic ? '⭐ ' : ''}${j.name}</span>
+        ${j.isCritic ? '<span class="critic-badge">Critica</span>' : ''}
+      </div>
+      <span class="completion-count">${filled}/${total}</span>
+      <span class="judge-select-arrow">${sel ? '▾' : '›'}</span>
+    </div>`;
+  }).join('');
+}
+
+// Mantieni il select nascosto per compatibilità interna, aggiornalo in sync
+function syncHiddenSelector(judgeName) {
+  const sel = document.getElementById('judge-selector');
+  sel.value = judgeName;
 }
 
 function renderJudgeSelector() {
   const sel = document.getElementById('judge-selector');
   sel.innerHTML = '<option value="">— Seleziona giudice —</option>'
-    + judges.map(j => `<option value="${j.name}">${j.isCritic ? '⭐ ' : ''}${j.name}</option>`).join('');
-  renderJudgesCompletion();
+    + judges.map(j => `<option value="${j.name}">${j.name}</option>`).join('');
+  renderJudgesPreview();
 }
 
 function renderJudgesCompletion() {
-  const el = document.getElementById('judges-completion');
-  if (judges.length === 0) { el.innerHTML=''; return; }
-  el.innerHTML = judges.map(j => {
-    const votes = draftVotes[j.name] || {};
-    const filled = singers.filter(s => {
-      const v = votes[s.name];
-      return v && v.int > 0 && v.int2 > 0;
-    }).length;
-    const total  = singers.length;
-    const done   = filled === total && total > 0;
-    return `<div class="completion-row ${done ? 'done' : ''}">
-      <span class="completion-dot ${done ? 'done' : ''}"></span>
-      <span class="completion-name">${j.isCritic ? '⭐ ' : ''}${j.name}</span>
-      <span class="completion-count">${filled}/${total}</span>
-    </div>`;
-  }).join('');
+  renderJudgesPreview();
+}
+
+function selectJudge(judgeName) {
+  selectedJudge = judgeName;
+  syncHiddenSelector(judgeName);
+  renderJudgesPreview();
+  onJudgeSelected();
+  // Scroll alla griglia voti
+  setTimeout(() => {
+    document.getElementById('votes-grid')?.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 100);
 }
 
 // ── Editor giudici overlay ────────────────────
@@ -169,9 +185,11 @@ function addJudgeRow(name='', isCritic=false) {
 }
 
 function toggleCriticBtn(btn) {
-  // Solo uno alla volta può essere critica
+  const wasActive = btn.classList.contains('active');
+  // Rimuovi da tutti
   document.querySelectorAll('.critic-toggle').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  // Toggle: se era attivo lo disattiva, altrimenti attiva questo
+  if (!wasActive) btn.classList.add('active');
 }
 
 async function saveJudges() {
@@ -213,7 +231,7 @@ async function loadDraftVotes() {
 }
 
 function onJudgeSelected() {
-  const judgeName = document.getElementById('judge-selector').value;
+  const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   const grid      = document.getElementById('votes-grid');
   const btn       = document.getElementById('btn-save-votes');
 
@@ -247,13 +265,13 @@ function renderVotesGrid(judgeName) {
           ${s.song ? `<div class="vg-song">♪ ${s.song}</div>` : ''}
         </div>
         <div class="vg-score">
-          <input class="score-input" type="number" min="1" max="10"
+          <input class="score-input" type="number" min="1" max="10" inputmode="numeric" pattern="[0-9]*"
             data-singer="${s.name}" data-field="int"
             value="${v.int || ''}" placeholder="—"
             oninput="onScoreInput(this)">
         </div>
         <div class="vg-score">
-          <input class="score-input" type="number" min="1" max="10"
+          <input class="score-input" type="number" min="1" max="10" inputmode="numeric" pattern="[0-9]*"
             data-singer="${s.name}" data-field="int2"
             value="${v.int2 || ''}" placeholder="—"
             oninput="onScoreInput(this)">
@@ -285,7 +303,7 @@ function onScoreInput(input) {
 }
 
 async function saveJudgeVotes() {
-  const judgeName = document.getElementById('judge-selector').value;
+  const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   if (!judgeName) return;
 
   // Valida che tutti i cantanti abbiano voti
