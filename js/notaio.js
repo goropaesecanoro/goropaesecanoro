@@ -436,7 +436,7 @@ async function computeRanking() {
   const zMin = Math.min(...zAggregated);
   const zMax = Math.max(...zAggregated);
   const techScores = singers.map((_,i) =>
-    zMax > zMin ? Math.round(2 + (zAggregated[i]-zMin)/(zMax-zMin)*18) : 11
+    zMax > zMin ? parseFloat((2 + (zAggregated[i]-zMin)/(zMax-zMin)*18).toFixed(4)) : 11
   );
 
   // Bonus pubblico dalla classifica pubblica della serata
@@ -446,11 +446,11 @@ async function computeRanking() {
   const serataScores = singers.map((s,i) => ({
     name:       s.name,
     song:       s.song || '',
-    tech:       techScores[i],
+    tech:       techScores[i],                              // float 4 decimali
     bonus:      publicBonus[s.name] || 0,
-    total:      techScores[i] + (publicBonus[s.name] || 0),
-    zAgg:       zAggregated[i].toFixed(3),
-  })).sort((a,b) => b.total - a.total);
+    total:      parseFloat((techScores[i] + (publicBonus[s.name] || 0)).toFixed(4)),
+    zAgg:       zAggregated[i],                             // float grezzo per tie-break
+  })).sort((a,b) => b.total - a.total || b.zAgg - a.zAgg);
 
   // Calcola classifica critica separata (solo dal giudice critica)
   const criticJudge = judges.find(j => j.isCritic);
@@ -506,14 +506,47 @@ async function computePublicBonus() {
 // ══════════════════════════════════════════════
 //  OVERLAY CLASSIFICA SERATA
 // ══════════════════════════════════════════════
+// ── Ranking olimpico: ex-aequo con posizione condivisa ──────────────
+function assignOlympicRanks(sorted, scoreKey) {
+  const medals = ['🥇','🥈','🥉'];
+  let pos = 1;
+  const result = [];
+  for (let i = 0; i < sorted.length; ) {
+    const score = sorted[i][scoreKey];
+    // Trova tutti i pari merito
+    let j = i;
+    while (j < sorted.length && sorted[j][scoreKey] === score) j++;
+    const count   = j - i;
+    const isExAequo = count > 1;
+    const label   = count === 1
+      ? (medals[pos-1] || `${pos}°`)
+      : (medals[pos-1] ? `${medals[pos-1]}` : `${pos}°`);
+    for (let k = i; k < j; k++) {
+      result.push({
+        ...sorted[k],
+        rankLabel: label,
+        exAequo:   isExAequo,
+        rankNum:   pos
+      });
+    }
+    pos += count; // salta le posizioni occupate
+    i = j;
+  }
+  return result;
+}
+
 function openRankingOverlay(mode = 'full') {
   if (!lastRanking) return;
   const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
   const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
   const isJury = mode === 'jury';
 
-  // Ordina per la metrica corretta
-  const sorted = [...serataScores].sort((a,b) => isJury ? b.tech - a.tech : b.total - a.total);
+  // Ordina per la metrica corretta, tie-break su zAgg grezzo
+  const sorted = [...serataScores].sort((a,b) =>
+    isJury ? (b.tech - a.tech || b.zAgg - a.zAgg)
+           : (b.total - a.total || b.zAgg - a.zAgg)
+  );
+  const ranked = assignOlympicRanks(sorted, isJury ? 'tech' : 'total');
 
   document.getElementById('ranking-overlay-title').textContent = isJury
     ? `Giuria tecnica — ${SERATA_LABELS[currentSerata]}`
@@ -524,31 +557,33 @@ function openRankingOverlay(mode = 'full') {
     + `<br><span style="opacity:.6;font-size:11px">Giudici: ${judgesWithVotes.join(', ')}</span>`;
 
   document.getElementById('ranking-overlay-rows').innerHTML = isJury ? `
-    <div class="n-ranking-head" style="grid-template-columns:36px 1fr 50px">
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 60px">
       <span>#</span><span>Cantante</span><span>Tec</span>
     </div>
-    ${sorted.map((c,i) => `
-    <div class="n-ranking-row" style="grid-template-columns:36px 1fr 50px">
-      <span class="n-r-pos">${labels[i]||''}</span>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 60px">
+      <span class="n-r-pos">${c.rankLabel}</span>
       <div class="s-info">
         <div class="s-name">${c.name}</div>
         ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
       </div>
-      <span class="n-r-total">${c.tech}</span>
+      <span class="n-r-total">${c.tech.toFixed(2)}</span>
     </div>`).join('')}` : `
-    <div class="n-ranking-head">
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 44px 44px 54px">
       <span>#</span><span>Cantante</span><span>Tec</span><span>Pub</span><span>Tot</span>
     </div>
-    ${sorted.map((c,i) => `
-    <div class="n-ranking-row">
-      <span class="n-r-pos">${labels[i]||''}</span>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 44px 44px 54px">
+      <span class="n-r-pos">${c.rankLabel}</span>
       <div class="s-info">
         <div class="s-name">${c.name}</div>
         ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
       </div>
-      <span class="n-r-score">${c.tech}</span>
+      <span class="n-r-score">${c.tech.toFixed(2)}</span>
       <span class="n-r-bonus">+${c.bonus}</span>
-      <span class="n-r-total">${c.total}</span>
+      <span class="n-r-total">${c.total.toFixed(2)}</span>
     </div>`).join('')}`;
 
   openOverlay('overlay-ranking');
