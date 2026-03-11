@@ -706,6 +706,7 @@ window.showTop3Random      = showTop3Random;
 window.computeFestivalRanking = computeFestivalRanking;
 window.openFestivalOverlay = openFestivalOverlay;
 window.openCriticaOverlay  = openCriticaOverlay;
+window.openOverlay         = openOverlay;
 window.closeOverlay        = closeOverlay;
 window.signOutNotaio       = signOutNotaio;
 window.signInWithGoogle    = signInWithGoogle;
