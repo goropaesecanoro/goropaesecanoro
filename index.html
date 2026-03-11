@@ -7,27 +7,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script>
-  // Logout forzato via ?logout — eseguito prima di tutto il resto
+  // Logout forzato via ?logout
+  // Firebase salva la sessione in IndexedDB e localStorage — le svuotiamo direttamente
   if (new URLSearchParams(window.location.search).has('logout')) {
-    // Importa Firebase Auth e fa signOut, poi ricarica senza il parametro
-    var _fbApp = null;
-    Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js')
-    ]).then(([{initializeApp}, {getAuth, signOut}]) => {
-      const app  = initializeApp({
-        apiKey:            "AIzaSyAFvDuG0glouoEhN1Hqrd68c6F30A11su4",
-        authDomain:        "goro-paese-canoro-2026.firebaseapp.com",
-        projectId:         "goro-paese-canoro-2026",
-        storageBucket:     "goro-paese-canoro-2026.firebasestorage.app",
-        messagingSenderId: "782054899768",
-        appId:             "1:782054899768:web:84473d4d299c4f42fa26cd"
-      }, 'logout-instance');
-      const auth = getAuth(app);
-      signOut(auth).finally(() => {
-        window.location.replace(window.location.pathname);
-      });
+    // 1. Cancella tutto localStorage
+    localStorage.clear();
+    // 2. Cancella tutto sessionStorage
+    sessionStorage.clear();
+    // 3. Cancella IndexedDB Firebase (dove è salvato il token reale)
+    var dbs = ['firebaseLocalStorageDb', 'firebase-heartbeat-database',
+               'firebase-installations-database'];
+    dbs.forEach(function(name) {
+      try { indexedDB.deleteDatabase(name); } catch(e) {}
     });
+    // 4. Ricarica senza il parametro
+    window.location.replace(window.location.pathname);
   }
 </script>
 <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfnToUsAAAAAJZ_P6iO-8dzp1cF8g6pprriUKW8" async defer></script>
@@ -67,6 +61,7 @@
     </button>
   </div>
   <p class="hero-note">Un accesso = un voto per serata &nbsp;•&nbsp; Dati protetti</p>
+  <div class="copyright-bar">© 2026 Roberto Gennari</div>
 </div>
 
 <!-- ══ PHONE AUTH ════════════════════════════════ -->
@@ -104,6 +99,7 @@
   <h2 class="closed-title">Votazioni <span>chiuse</span></h2>
   <p class="closed-sub">Le votazioni per questa serata sono terminate. Grazie per la partecipazione!</p>
   <div id="closed-dynamic"></div>
+  <div class="copyright-bar">© 2026 Roberto Gennari</div>
   <div id="closed-random-note" style="display:none;margin-top:16px;font-size:12px;color:var(--muted);text-align:center;max-width:280px;line-height:1.6">
     I preferiti sono mostrati in <strong style="color:var(--gold)">ordine casuale</strong> — non riflettono la classifica reale.<br>
     Non includono le votazioni della giuria tecnica.<br>
@@ -132,6 +128,7 @@
   <h2>Voto <span>registrato!</span></h2>
   <p>Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.</p>
   <div class="summary-table" id="already-summary"></div>
+  <div class="copyright-bar">© 2026 Roberto Gennari</div>
 </div>
 
 <!-- ══ VOTING ════════════════════════════════════ -->
@@ -203,11 +200,9 @@
   <h2 class="thankyou-title">Grazie<br><span>per aver votato!</span></h2>
   <p class="thankyou-sub">Il tuo voto è stato registrato con successo.</p>
   <div class="summary-table" id="thanks-summary"></div>
+  <div class="copyright-bar">© 2026 Roberto Gennari</div>
 </div>
 
-
-<!-- ══ COPYRIGHT ════════════════════════════════ -->
-<div class="copyright-bar">© 2026 Roberto Gennari</div>
 
 <script type="module">
   import { generateStars, showScreen } from './js/firebase-init.js';
