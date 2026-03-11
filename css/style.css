@@ -332,8 +332,6 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 
 
 
-/* ── Hero layout e locandina ── */
-.hero { padding-top: 12px; gap: 8px; }
 
 .hero-image {
   width: min(320px, 85vw);
@@ -353,15 +351,6 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   margin-bottom: -2px;
 }
 
-/* ── Edizione — solo testo, niente box ── */
-.hero-edition {
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  opacity: .6;
-  margin-bottom: 0;
-}
 
 /* ── Copyright — non sovrasta submit bar ── */
 
@@ -381,10 +370,39 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   letter-spacing: .5px;
   font-family: 'DM Sans', sans-serif;
   padding: 0 0 14px;
-  margin-top: auto;
   pointer-events: none;
   width: 100%;
 }
 
 /* Nella voting screen nascondi — c'è già la submit bar */
 .voting-screen .copyright-bar { display: none; }
+
+/* ── Hero — layout definitivo ── */
+.hero {
+  justify-content: flex-start !important;
+  padding-top: 24px !important;
+  padding-bottom: 20px !important;
+  gap: 6px !important;
+}
+
+.hero-image {
+  width: min(320px, 85vw) !important;
+  max-height: 40vh !important;
+  object-fit: contain;
+  margin-bottom: 0;
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,.35));
+}
+
+.hero-edition {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: .6;
+  margin: 0;
+}
+
+/* Copyright dentro hero — non usa margin-top:auto, sta sotto il contenuto */
+.hero .copyright-bar {
+  margin-top: 12px !important;
+}
