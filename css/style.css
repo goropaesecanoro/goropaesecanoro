@@ -371,7 +371,10 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   font-family: 'DM Sans', sans-serif;
   pointer-events: none;
   z-index: 1;
+  transition: bottom .2s;
 }
+body.has-submit .copyright-bar { bottom: 72px; }
+
 
 /* Submit bar: staccata dalla firma */
 .submit-bar {
@@ -384,3 +387,13 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 }
 
 /* Voting screen: spazio in fondo per submit-bar + firma */
+
+/* ── Edizione 2026 ── */
+.hero-edition {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: .6;
+  margin: 0;
+}
