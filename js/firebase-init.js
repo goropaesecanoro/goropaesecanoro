@@ -72,3 +72,10 @@ export function generateStars() {
     c.appendChild(s);
   }
 }
+
+// Logout forzato via URL: aggiungi ?logout alla fine dell'URL
+if (new URLSearchParams(window.location.search).has('logout')) {
+  import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js")
+    .then(({ signOut }) => signOut(auth))
+    .then(() => window.location.replace(window.location.pathname));
+}
