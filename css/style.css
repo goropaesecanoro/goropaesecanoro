@@ -78,11 +78,11 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .closed-title span { color:var(--gold); }
 .closed-sub   { margin-top:10px; color:var(--muted); font-size:15px; max-width:280px; animation:fadeDown .5s .2s ease both; }
 
-.top5-section { margin-top:32px; width:100%; max-width:340px; animation:fadeUp .5s .3s ease both; }
-.top5-label   { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; text-align:left; }
-.top5-card    { background:var(--surf2); border-radius:var(--r-sm); padding:12px 16px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
-.top5-dot     { width:10px; height:10px; border-radius:50%; background:var(--gold); flex-shrink:0; margin-top:4px; }
-.top5-name    { font-size:15px; font-weight:500; } /* legacy */
+
+
+
+
+ /* legacy */
 
 /* ── PHONE AUTH ── */
 .phone-screen { min-height:100svh; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; }
@@ -505,3 +505,41 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   font-size:12px; width:100%;
 }
 .singer-edit-name:focus, .singer-edit-song:focus { outline:none; border-color:var(--gold); }
+
+/* ══ TOP5 — lista puntata allineata a sinistra ══ */
+.top5-section {
+  margin-top: 24px;
+  width: 100%;
+  max-width: 340px;
+  text-align: left;
+  animation: fadeUp .5s .3s ease both;
+}
+.top5-label {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  text-align: left;
+}
+.top5-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: var(--surf2);
+  border-radius: var(--r-sm);
+}
+.top5-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+/* s-info già definito globalmente — nome e canzone in colonna, allineati a sinistra */
+
+/* closed-dynamic: override text-align della closed-screen */
+#closed-dynamic { text-align: left; width: 100%; max-width: 340px; }
