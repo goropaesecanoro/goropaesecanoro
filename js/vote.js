@@ -178,13 +178,20 @@ async function renderReveal() {
 async function loadSingers() {
   try {
     if (currentSerata === 3) {
-      const [s1, s2] = await Promise.all([
+      const [s1, s2, s3] = await Promise.all([
         getDoc(doc(db,'singers','s1')),
-        getDoc(doc(db,'singers','s2'))
+        getDoc(doc(db,'singers','s2')),
+        getDoc(doc(db,'singers','s3'))
       ]);
-      const list1 = s1.exists() ? s1.data().list : DEFAULT_SINGERS[1];
-      const list2 = s2.exists() ? s2.data().list : DEFAULT_SINGERS[2];
-      singers = [...list1, ...list2].map(normSinger);
+      if (s3.exists() && s3.data().list?.length > 0) {
+        // Usa ordine finale salvato dall'admin
+        singers = s3.data().list.map(normSinger);
+      } else {
+        // Fallback: S1 + S2 in ordine naturale
+        const list1 = s1.exists() ? s1.data().list : DEFAULT_SINGERS[1];
+        const list2 = s2.exists() ? s2.data().list : DEFAULT_SINGERS[2];
+        singers = [...list1, ...list2].map(normSinger);
+      }
     } else {
       const snap = await getDoc(doc(db,'singers',`s${currentSerata}`));
       const list = snap.exists() ? snap.data().list : DEFAULT_SINGERS[currentSerata];

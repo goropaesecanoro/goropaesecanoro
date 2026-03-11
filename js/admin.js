@@ -136,6 +136,9 @@ function updateSerataLabel() {
   // Mostra/nascondi tasto classifica finale Z-score
   const zBtn = document.getElementById('btn-zscore-wrap');
   if (zBtn) zBtn.style.display = currentSerata === 3 ? '' : 'none';
+  // Mostra/nascondi pulsante ordine finale
+  const oBtn = document.getElementById('btn-ordine-finale');
+  if (oBtn) oBtn.style.display = currentSerata === 3 ? '' : 'none';
 }
 
 function updateSwitches() {
@@ -468,6 +471,101 @@ async function resetVotes() {
   } catch(e) { showToast('Errore durante il reset'); }
 }
 
+
+// ══════════════════════════════════════════════
+//  ORDINE SERATA FINALE — drag & drop
+// ══════════════════════════════════════════════
+let _finalOrderList = []; // [{name, song, serataNum}]
+
+async function openFinalOrderEditor() {
+  // Carica S3 se esiste, altrimenti S1+S2
+  const [s1Snap, s2Snap, s3Snap] = await Promise.all([
+    getDoc(doc(db,'singers','s1')),
+    getDoc(doc(db,'singers','s2')),
+    getDoc(doc(db,'singers','s3'))
+  ]);
+  const norm = (list, sn) => (list||[])
+    .map(s => typeof s==='string' ? {name:s,song:'',serataNum:sn} : {...s,serataNum:sn});
+  const list1 = s1Snap.exists() ? norm(s1Snap.data().list, 1) : DEFAULT_SINGERS[1].map(s=>({name:String(s),song:'',serataNum:1}));
+  const list2 = s2Snap.exists() ? norm(s2Snap.data().list, 2) : DEFAULT_SINGERS[2].map(s=>({name:String(s),song:'',serataNum:2}));
+
+  if (s3Snap.exists() && s3Snap.data().list?.length > 0) {
+    // S3 salvato — ricostruisci con dati aggiornati da S1/S2
+    const dataMap = {};
+    [...list1,...list2].forEach(s => { dataMap[s.name] = s; });
+    _finalOrderList = s3Snap.data().list.map(s => {
+      const name = typeof s==='string' ? s : s.name;
+      return dataMap[name] || {name, song:'', serataNum:0};
+    });
+  } else {
+    _finalOrderList = [...list1, ...list2];
+  }
+
+  renderFinalOrderList();
+  openOverlay('overlay-order');
+}
+
+function renderFinalOrderList() {
+  const container = document.getElementById('order-list');
+  container.innerHTML = '';
+  _finalOrderList.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'order-row';
+    row.draggable = true;
+    row.dataset.idx = i;
+    row.innerHTML = `
+      <div class="order-drag-handle">⠿</div>
+      <div class="order-info">
+        <div class="order-num">${i+1}</div>
+        <div class="s-info">
+          <div class="s-name">${s.name}</div>
+          ${s.song ? `<div class="s-song">♪ ${s.song}</div>` : ''}
+        </div>
+      </div>
+      <div class="order-serata">S${s.serataNum||'?'}</div>`;
+
+    // Drag & drop handlers
+    row.addEventListener('dragstart', e => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', i);
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx   = parseInt(row.dataset.idx);
+      if (fromIdx === toIdx) return;
+      const moved = _finalOrderList.splice(fromIdx, 1)[0];
+      _finalOrderList.splice(toIdx, 0, moved);
+      renderFinalOrderList();
+    });
+
+    container.appendChild(row);
+  });
+}
+
+async function saveFinalOrder() {
+  try {
+    const list = _finalOrderList.map(({name, song}) => ({name, song}));
+    await setDoc(doc(db,'singers','s3'), { list, updatedAt: serverTimestamp() });
+    showToast('✓ Ordine finale salvato');
+    closeOverlay('overlay-order');
+    // Aggiorna singers in memoria
+    singers[1] = singers[1]; // invariato
+    singers[2] = singers[2]; // invariato
+  } catch(e) {
+    showToast('Errore nel salvataggio: ' + e.message);
+  }
+}
+
 // ══════════════════════════════════════════════
 //  SIGN OUT — directo, poi reload
 // ══════════════════════════════════════════════
@@ -511,3 +609,5 @@ window.openSingersEditor = (s) => {
 };
 window.saveSingersOverlay     = () => saveSingers(window._editingSerata);
 window.signOutAdmin           = adminSignOut;
+window.openFinalOrderEditor   = openFinalOrderEditor;
+window.saveFinalOrder         = saveFinalOrder;
