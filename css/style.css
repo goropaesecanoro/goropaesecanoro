@@ -354,8 +354,12 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
 
 
 
+
+
+
+
 /* ── Copyright ── */
-/* Default: fixed in fondo per schermate a schermata intera (hero, chiusa, grazie ecc.) */
+/* Default: fixed in fondo per tutte le schermate flex */
 .copyright-bar {
   position: fixed;
   bottom: 6px;
@@ -369,42 +373,18 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   z-index: 1;
 }
 
-/* Nelle schermate scrollabili (voting, admin) non è fixed:
-   viene renderizzato nel flusso normale in fondo alla pagina */
-.voting-screen ~ .copyright-bar,
-.admin-screen ~ .copyright-bar {
+/* Dentro voting-screen: nel flusso, sotto i slot, sopra submit-bar */
+.voting-screen .copyright-bar {
   position: static;
-  display: block;
-  padding: 16px 0 20px;
-  margin-top: 8px;
-}
-
-/* Submit bar: abbastanza spazio da non coprire la firma */
-.submit-bar {
-  padding-bottom: max(32px, env(safe-area-inset-bottom));
-}
-
-/* ── Copyright ── */
-.copyright-bar {
-  position: fixed;
-  bottom: 6px;
-  left: 0; right: 0;
   text-align: center;
   font-size: 11px;
   color: rgba(255,255,255,.18);
   letter-spacing: .5px;
-  font-family: 'DM Sans', sans-serif;
+  padding: 12px 0 8px;
   pointer-events: none;
-  z-index: 1;
 }
-/* Schermate scrollabili: copyright nel flusso, non fixed */
-body.screen-scrollable .copyright-bar {
-  position: static;
-  padding: 16px 0 24px;
-  margin-top: 4px;
-  display: block;
-}
-/* Submit bar: spazio per non coprire la firma quando fixed */
+
+/* Submit bar con spazio sufficiente sopra la firma fixed */
 .submit-bar {
-  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
 }
