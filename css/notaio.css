@@ -319,3 +319,62 @@
 }
 
 .btn-icon-sm:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ══ GIUDICE — riga interattiva selezionabile ══ */
+.judge-select-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surf2);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  user-select: none;
+}
+
+.judge-select-row:hover {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.15);
+}
+
+.judge-select-row.selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.08);
+}
+
+.judge-select-row.done {
+  border-color: rgba(100,200,100,.2);
+}
+
+.judge-select-row.done.selected {
+  border-color: var(--gold);
+}
+
+.judge-select-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.judge-select-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.judge-select-arrow {
+  font-size: 16px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: color .15s;
+}
+
+.judge-select-row.selected .judge-select-arrow {
+  color: var(--gold);
+}
