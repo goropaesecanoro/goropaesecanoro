@@ -220,18 +220,27 @@ async function refreshRanking() {
   if (!rows) return;
   rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
   try {
-    const snap      = await getDocs(collection(db, `votes_s${currentSerata}`));
-    const allVotes  = []; snap.forEach(d => allVotes.push(d.data()));
-    const activeObjs = currentSerata === 3
-      ? [...singers[1], ...singers[2]]
-      : singers[currentSerata];
+    // Carica voti e cantanti da Firestore direttamente — non dipende da singers in memoria
+    const [votesSnap, s1Snap, s2Snap] = await Promise.all([
+      getDocs(collection(db, `votes_s${currentSerata}`)),
+      getDoc(doc(db,'singers','s1')),
+      getDoc(doc(db,'singers','s2'))
+    ]);
+    const allVotes = []; votesSnap.forEach(d => allVotes.push(d.data()));
+    const norm = list => (list||[]).map(s => typeof s==='string' ? {name:s,song:''} : s);
+    const list1 = s1Snap.exists() ? norm(s1Snap.data().list) : DEFAULT_SINGERS[1].map(s=>({name:String(s),song:''}));
+    const list2 = s2Snap.exists() ? norm(s2Snap.data().list) : DEFAULT_SINGERS[2].map(s=>({name:String(s),song:''}));
+    const activeObjs = currentSerata === 3 ? [...list1, ...list2]
+                     : currentSerata === 2 ? list2 : list1;
     const songMap = {};
     activeObjs.forEach(s => { songMap[s.name] = s.song || ''; });
-
     const scores = {};
     activeObjs.forEach(s => scores[s.name] = 0);
     allVotes.forEach(({vote}) =>
-      vote?.forEach((name,i) => { if (scores[name] !== undefined) scores[name] += POINTS[i]; })
+      vote?.forEach((name,i) => {
+        if (scores[name] === undefined) scores[name] = 0;
+        scores[name] += POINTS[i];
+      })
     );
 
     const ranking = Object.entries(scores).sort((a,b) => b[1]-a[1]);
