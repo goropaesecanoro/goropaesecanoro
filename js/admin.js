@@ -222,12 +222,14 @@ async function refreshRanking() {
   try {
     const snap      = await getDocs(collection(db, `votes_s${currentSerata}`));
     const allVotes  = []; snap.forEach(d => allVotes.push(d.data()));
-    const active    = currentSerata === 3
+    const activeObjs = currentSerata === 3
       ? [...singers[1], ...singers[2]]
       : singers[currentSerata];
+    const songMap = {};
+    activeObjs.forEach(s => { songMap[s.name] = s.song || ''; });
 
     const scores = {};
-    active.forEach(s => scores[s] = 0);
+    activeObjs.forEach(s => scores[s.name] = 0);
     allVotes.forEach(({vote}) =>
       vote?.forEach((name,i) => { if (scores[name] !== undefined) scores[name] += POINTS[i]; })
     );
@@ -240,13 +242,15 @@ async function refreshRanking() {
 
     rows.innerHTML = '';
     ranking.forEach(([name,pts],i) => {
-      const pct = maxPts > 0 ? (pts/maxPts*100).toFixed(0) : 0;
-      const r   = document.createElement('div');
+      const pct  = maxPts > 0 ? (pts/maxPts*100).toFixed(0) : 0;
+      const song = songMap[name] || '';
+      const r    = document.createElement('div');
       r.className = 'ranking-row';
       r.innerHTML = `
         <span class="r-pos">${i+1}</span>
         <div style="min-width:0">
           <div class="r-name">${name}</div>
+          ${song ? `<div class="r-song">♪ ${song}</div>` : ''}
           <div class="r-bar-wrap"><div class="r-bar" style="width:${pct}%"></div></div>
         </div>
         <span class="r-pts">${pts}</span>`;
@@ -381,7 +385,7 @@ async function computeAndShowFinalRanking() {
       zTot:    c.zTot,
       posSerata:  c.posSerata,   // posizione in serata 1 o 2 (tra 7)
       posFinale:  c.posFinale,   // posizione in serata 3 (tra 14)
-      serataNum:  singers[1].includes(c.name) ? 1 : 2
+      serataNum:  singers[1].map(s=>s.name).includes(c.name) ? 1 : 2
     }));
 
     // Forza sovrascrittura su Firestore con merge:false (default setDoc)
