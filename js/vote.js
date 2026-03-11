@@ -104,11 +104,17 @@ async function showClosedScreen() {
     el.innerHTML = `
       <div class="top5-section">
         <div class="top5-label">I più apprezzati stasera</div>
-        ${top5.map(name => `
+        ${top5.map(name => {
+          const song = singers.find(s=>s.name===name)?.song || '';
+          return `
           <div class="top5-card">
             <div class="top5-dot"></div>
-            <div class="top5-name">${name}</div>
-          </div>`).join('')}
+            <div class="top5-info">
+              <div class="top5-name">${name}</div>
+              ${song ? `<div class="top5-song">♪ ${song}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
       </div>`;
   } else {
     el.innerHTML = '';
@@ -330,15 +336,22 @@ async function submitVote() {
   }
 }
 
-// ── Summary table (solo nomi, dopo il voto) ───
+// ── Summary table (nome + canzone) ───────────
 export function renderSummaryTable(id, vote) {
-  const medals = ['🥇','🥈','🥉','4°','5°'];
+  const medals  = ['🥇','🥈','🥉','4°','5°'];
+  // Mappa nome→canzone dai singers caricati (se disponibili)
+  const songMap = {};
+  singers.forEach(s => { songMap[s.name] = s.song || ''; });
+
   document.getElementById(id).innerHTML =
     `<div class="summary-label">Il tuo voto — ${SERATA_LABELS[currentSerata]}</div>` +
     vote.map((name,i) => `
       <div class="summary-row">
         <span class="s-rank" style="font-size:22px">${medals[i]}</span>
-        <span class="s-name">${name}</span>
+        <div class="s-info">
+          <span class="s-name">${name}</span>
+          ${songMap[name] ? `<span class="s-song">♪ ${songMap[name]}</span>` : ''}
+        </div>
       </div>`).join('');
 }
 

@@ -399,16 +399,22 @@ async function computeAndShowFinalRanking() {
 
 function renderFinalRows(rows, ranking) {
   rows.innerHTML = '';
+  // Mappa nome→canzone da singers caricati
+  const songMap = {};
+  [...singers[1], ...singers[2]].forEach(s => { songMap[s.name] = s.song || ''; });
+
   ranking.forEach((c,i) => {
     const serataLabel = c.serataNum ? `Ser.${c.serataNum}: ${c.posSerata}°` : '';
     const finaleLabel = c.posFinale  ? `Finale: ${c.posFinale}°`            : '';
     const subLine     = [serataLabel, finaleLabel].filter(Boolean).join('  |  ');
+    const song        = songMap[c.name] || '';
     const r = document.createElement('div');
     r.className = 'ranking-row-final';
     r.innerHTML = `
       <span class="r-pos">${i+1}</span>
       <div style="min-width:0">
         <div class="r-name">${c.name}</div>
+        ${song ? `<div class="r-song">♪ ${song}</div>` : ''}
         ${subLine ? `<div class="r-subline">${subLine}</div>` : ''}
       </div>
       <span class="r-zscore">${Number(c.zTot).toFixed(2)}</span>`;
