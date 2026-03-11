@@ -117,21 +117,24 @@ function renderJudgesPreview() {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px">Nessun giudice configurato — usa ✎ Modifica</div>';
     return;
   }
-  el.innerHTML = judges.map(j => {
+  // Normale prima, critica in fondo
+  const normal = judges.filter(j => !j.isCritic);
+  const critic = judges.filter(j => j.isCritic);
+  const ordered = [...normal, ...critic];
+
+  el.innerHTML = ordered.map(j => {
     const votes  = draftVotes[j.name] || {};
     const filled = singers.filter(s => { const v=votes[s.name]; return v&&v.int>0&&v.int2>0; }).length;
     const total  = singers.length;
     const done   = filled === total && total > 0;
     const sel    = selectedJudge === j.name;
-    return `<div class="judge-select-row ${done ? 'done' : ''} ${sel ? 'selected' : ''}"
-      onclick="selectJudge('${j.name.replace(/'/g,"\'")}')">
-      <span class="completion-dot ${done ? 'done' : ''}"></span>
-      <div class="judge-select-info">
-        <span class="judge-select-name">${j.isCritic ? '⭐ ' : ''}${j.name}</span>
-        ${j.isCritic ? '<span class="critic-badge">Critica</span>' : ''}
-      </div>
-      <span class="completion-count">${filled}/${total}</span>
-      <span class="judge-select-arrow">${sel ? '▾' : '›'}</span>
+    const name   = j.name.replace(/'/g, "\'");
+    return `<div class="judge-select-row ${done?'done':''} ${sel?'selected':''} ${j.isCritic?'critic-row':''}"
+      onclick="selectJudge('${name}')">
+      <span class="judge-select-dot ${done?'done':''}"></span>
+      <span class="judge-select-name">${j.isCritic ? '⭐ ' : ''}${j.name}</span>
+      ${j.isCritic ? '<span class="critic-badge" style="font-size:10px">Critica</span>' : ''}
+      <span class="judge-select-count">${filled}/${total}</span>
     </div>`;
   }).join('');
 }
@@ -233,17 +236,17 @@ async function loadDraftVotes() {
 function onJudgeSelected() {
   const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   const grid      = document.getElementById('votes-grid');
-  const btn       = document.getElementById('btn-save-votes');
+  const actions   = document.getElementById('votes-actions');
 
   if (!judgeName) {
-    grid.style.display = 'none';
-    btn.style.display  = 'none';
+    grid.style.display    = 'none';
+    if (actions) actions.style.display = 'none';
     return;
   }
 
   renderVotesGrid(judgeName);
-  grid.style.display = '';
-  btn.style.display  = '';
+  grid.style.display    = '';
+  if (actions) actions.style.display = 'flex';
 }
 
 function renderVotesGrid(judgeName) {
@@ -300,6 +303,27 @@ function onScoreInput(input) {
   row?.classList.toggle('complete', v.int > 0 && v.int2 > 0);
 
   renderJudgesCompletion();
+}
+
+async function clearJudgeVotes() {
+  const judgeName = selectedJudge;
+  if (!judgeName) return;
+  if (!confirm(`Eliminare tutti i voti di ${judgeName} per questa serata?`)) return;
+  // Cancella dal draft locale
+  delete draftVotes[judgeName];
+  // Salva su Firestore
+  try {
+    await setDoc(doc(db,'jury_votes',`s${currentSerata}`), {
+      votes: draftVotes,
+      updatedAt: serverTimestamp()
+    });
+    // Ri-renderizza griglia vuota e lista
+    renderVotesGrid(judgeName);
+    renderJudgesPreview();
+    showToast(`✓ Voti di ${judgeName} eliminati`);
+  } catch(e) {
+    showToast('Errore: ' + e.message);
+  }
 }
 
 async function saveJudgeVotes() {
@@ -613,12 +637,14 @@ async function signInWithGoogle() {
 
 // ── Expose ────────────────────────────────────
 window.openJudgesEditor    = openJudgesEditor;
+window.selectJudge         = selectJudge;
 window.addJudgeRow         = addJudgeRow;
 window.toggleCriticBtn     = toggleCriticBtn;
 window.saveJudges          = saveJudges;
 window.onJudgeSelected     = onJudgeSelected;
 window.onScoreInput        = onScoreInput;
 window.saveJudgeVotes      = saveJudgeVotes;
+window.clearJudgeVotes     = clearJudgeVotes;
 window.computeRanking      = computeRanking;
 window.openRankingOverlay  = openRankingOverlay;
 window.showTop3Random      = showTop3Random;
