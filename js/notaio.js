@@ -673,7 +673,14 @@ async function openCriticaOverlay() {
 // ══════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════
-function openOverlay(id)  { const el=document.getElementById(id); if(el) el.style.display='flex'; }
+function openOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'flex';
+  // Scroll sempre in cima alla overlay-box
+  const box = el.querySelector('.overlay-box');
+  if (box) box.scrollTop = 0;
+}
 function closeOverlay(id) { const el=document.getElementById(id); if(el) el.style.display='none'; }
 
 async function signOutNotaio() {
