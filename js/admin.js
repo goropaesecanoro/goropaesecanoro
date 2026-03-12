@@ -776,11 +776,6 @@ function editProfileName(uid, currentLabel) {
     .catch(e => showToast('Errore: ' + e.message));
 }
 
-function openOverlay(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
-}
-
 
 window.openSerataChooser      = openSerataChooser;
 window.selectPendingSerata    = selectPendingSerata;
