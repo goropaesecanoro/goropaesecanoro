@@ -215,18 +215,24 @@ async function toggleVoto(checked) {
   showToast(checked ? '🟢 Votazioni aperte' : '🔴 Votazioni chiuse');
 }
 
+function blockIfVotoAperto(checkbox, prevValue) {
+  // Ripristina il checkbox al valore precedente e mostra toast
+  setSwitchState(checkbox, prevValue);
+  showToast('⚠️ Chiudi prima le votazioni', 3500);
+}
+
 async function toggleTop5(checked) {
-  if (appConfig.votoAperto !== false) { showToast('Chiudi prima le votazioni'); return; }
+  if (appConfig.votoAperto !== false) { blockIfVotoAperto('toggle-top5', !checked); return; }
   await saveConfig({ mostraTop5: checked });
   updateSwitches();
-  showToast(checked ? 'Top 5 visibile al pubblico' : 'Top 5 nascosto');
+  showToast(checked ? '✓ Top 5 visibile al pubblico' : 'Top 5 nascosto');
 }
 
 async function toggleTop5Finale(checked) {
+  if (appConfig.votoAperto !== false) { blockIfVotoAperto('toggle-top5finale', !checked); return; }
   await saveConfig({ mostraTop5Finale: checked });
   updateSwitches();
   if (checked) {
-    // Verifica che la classifica festival sia già stata calcolata dal Notaio
     try {
       const snap = await getDoc(doc(db,'jury_ranking','festival'));
       if (!snap.exists() || !snap.data().ranking?.length) {
@@ -243,8 +249,7 @@ async function toggleTop5Finale(checked) {
 }
 
 async function toggleSvela(checked) {
-  if (currentSerata !== 3) { showToast('Disponibile solo nella Finale'); return; }
-  if (appConfig.votoAperto !== false) { showToast('Chiudi prima le votazioni'); return; }
+  if (appConfig.votoAperto !== false) { blockIfVotoAperto('toggle-svela', !checked); return; }
   await saveConfig({ svelaClassifica: checked });
   updateSwitches();
   showToast(checked ? '🏆 Classifica svelata al pubblico' : 'Classifica nascosta');
