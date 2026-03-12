@@ -393,10 +393,12 @@ async function clearJudgeVotes() {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
+    // Cancella classifica salvata per forzare ricalcolo
+    await deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{});
     // Ri-renderizza griglia vuota e lista
     renderVotesGrid(judgeName);
     renderJudgesPreview();
-    showToast(`✓ Voti di ${judgeName} eliminati`);
+    showToast(`✓ Voti di ${judgeName} eliminati — classifica azzerata`);
   } catch(e) {
     showToast('Errore: ' + e.message);
   }

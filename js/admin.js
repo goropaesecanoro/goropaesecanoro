@@ -37,17 +37,9 @@ export async function initAdminApp() {
     }
 
     if (!adminResult) {
-      document.body.innerHTML =
-        '<div style="font-family:monospace;background:#0D0D18;color:#F0EDE6;min-height:100vh;'
-      + 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px">'
-      + '<div style="color:#E85D5D;font-size:20px;margin-bottom:20px">DEBUG — accesso negato</div>'
-      + '<pre style="background:#1E1E35;border:1px solid #C9A84C;border-radius:12px;padding:20px;'
-      + 'font-size:14px;white-space:pre-wrap;word-break:break-all;max-width:440px;width:100%">'
-      + debugInfo + '</pre>'
-      + '<button onclick="window.location.href=\'index.html\'" '
-      + 'style="margin-top:20px;background:#1E1E35;color:#F0EDE6;border:1px solid rgba(255,255,255,.2);'
-      + 'border-radius:100px;padding:12px 24px;cursor:pointer;font-size:14px">← Torna al sito</button>'
-      + '</div>';
+      showScreen('screen-admin-login');
+      const p = document.querySelector('#screen-admin-login p');
+      if (p) p.innerHTML = '<span style="color:#E85D5D;font-weight:600">⚠️ Accesso non autorizzato.</span><br>Il tuo account non ha i permessi necessari.<br><span style="font-size:13px;opacity:.6">Contatta l\'organizzatore per richiedere l\'accesso.</span>';
       return;
     }
 
@@ -74,12 +66,27 @@ export async function initAdminApp() {
 // ══════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════
+let _unsubConfig = null;
+
 async function loadConfig() {
   try {
     const snap = await getDoc(doc(db,'config','current'));
     appConfig     = snap.exists() ? snap.data() : {};
     currentSerata = appConfig.serata || 1;
   } catch(e) { currentSerata = 1; }
+  if (_unsubConfig) return;
+  _unsubConfig = onSnapshot(doc(db,'config','current'), snap => {
+    if (!snap.exists()) return;
+    const prev = appConfig.serata;
+    appConfig = snap.data();
+    currentSerata = appConfig.serata || 1;
+    updateSerataLabel();
+    updateSwitches();
+    if (prev && prev !== currentSerata) {
+      showToast('\u{1F504} Serata cambiata in ' + SERATA_LABELS[currentSerata] + ' da un altro admin', 4000);
+      refreshRanking();
+    }
+  }, () => {});
 }
 
 async function saveConfig(updates) {
@@ -576,8 +583,9 @@ async function resetVotes() {
   try {
     const snap = await getDocs(collection(db, `votes_s${currentSerata}`));
     await Promise.all(snap.docs.map(d => deleteDoc(doc(db, `votes_s${currentSerata}`, d.id))));
+    await deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{});
     refreshRanking();
-    showToast('Voti azzerati');
+    showToast('Voti azzerati ✓');
   } catch(e) { showToast('Errore durante il reset'); }
 }
 
@@ -812,7 +820,7 @@ async function executeRoleAction() {
   pendingAction = null;
   try {
     if (action === 'assign') {
-      await setDoc(doc(db, 'notai' === role ? 'notai' : 'admins', uid), { assignedAt: serverTimestamp() });
+      await setDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid), { assignedAt: serverTimestamp() });
       // Notaio implica sempre anche Admin
       if (role === 'notaio') {
         await setDoc(doc(db, 'admins', uid), { assignedAt: serverTimestamp() });
