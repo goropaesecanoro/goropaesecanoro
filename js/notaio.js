@@ -19,6 +19,59 @@ let draftVotes     = {};   // {judgeName: {singerName: {int, int}}}
 let lastRanking    = null; // risultato ultimo calcolo serata
 let festivalRanking = null;
 
+// ══════════════════════════════════════════════
+//  WATCHER REVOCA DIRITTI + LOCK CONCORRENZA
+// ══════════════════════════════════════════════
+function startNotaioRightsWatcher(uid) {
+  if (_unsubRights) _unsubRights();
+  _unsubRights = onSnapshot(doc(db, 'notai', uid), snap => {
+    if (!snap.exists()) {
+      showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
+      setTimeout(async () => {
+        if (_unsubRights) { _unsubRights(); _unsubRights = null; }
+        await signOut(auth);
+        showScreen('screen-notaio-login');
+      }, 2500);
+    }
+  }, () => {});
+}
+
+const LOCK_TTL_MS = 120_000;
+
+async function acquireJudgeLock(serata, judgeName) {
+  const key = `jury_s${serata}_${judgeName.replace(/\s+/g,'_')}`;
+  const ref  = doc(db, 'editing_locks', key);
+  const now  = Date.now();
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.expiresAt > now && d.uid !== currentUser?.uid) {
+        showToast(`⚠️ ${d.name} sta già inserendo voti per ${judgeName}`, 4000);
+        return false;
+      }
+    }
+    await setDoc(ref, {
+      uid:       currentUser.uid,
+      name:      currentUser.displayName || currentUser.email || 'Notaio',
+      lockedAt:  now,
+      expiresAt: now + LOCK_TTL_MS,
+    });
+    return true;
+  } catch(e) { return true; }
+}
+
+async function releaseJudgeLock(serata, judgeName) {
+  if (!judgeName) return;
+  const key = `jury_s${serata}_${judgeName.replace(/\s+/g,'_')}`;
+  try {
+    const ref  = doc(db, 'editing_locks', key);
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().uid === currentUser?.uid) await deleteDoc(ref);
+  } catch(e) {}
+}
+
+
 // ── Boot ──────────────────────────────────────
 generateStars();
 
