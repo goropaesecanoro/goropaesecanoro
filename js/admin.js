@@ -167,17 +167,22 @@ function renderSingersEditor(serata) {
 // ══════════════════════════════════════════════
 function startRightsWatcher(uid) {
   if (_unsubRights) _unsubRights();
+  let initialLoad = true;
   _unsubRights = onSnapshot(doc(db, 'admins', uid), snap => {
+    if (initialLoad) { initialLoad = false; return; } // ignora lo stato iniziale
     if (!snap.exists()) {
-      // Diritti revocati: forza logout immediato
       showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
       setTimeout(async () => {
         if (_unsubRights) { _unsubRights(); _unsubRights = null; }
         await signOutUser();
         showScreen('screen-admin-login');
       }, 2500);
+    } else {
+      // Diritti concessi o aggiornati: ricarica per applicare i nuovi permessi
+      showToast('✅ Permessi aggiornati. Ricaricamento…', 2000);
+      setTimeout(() => window.location.reload(), 2000);
     }
-  }, () => {}); // ignora errori di rete
+  }, () => {});
 }
 
 function renderAdminPanel(user, isSuperAdmin = false) {

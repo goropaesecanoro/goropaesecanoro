@@ -24,7 +24,9 @@ let festivalRanking = null;
 // ══════════════════════════════════════════════
 function startNotaioRightsWatcher(uid) {
   if (_unsubRights) _unsubRights();
+  let initialLoad = true;
   _unsubRights = onSnapshot(doc(db, 'notai', uid), snap => {
+    if (initialLoad) { initialLoad = false; return; } // ignora lo stato iniziale
     if (!snap.exists()) {
       showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
       setTimeout(async () => {
@@ -32,6 +34,10 @@ function startNotaioRightsWatcher(uid) {
         await signOut(auth);
         showScreen('screen-notaio-login');
       }, 2500);
+    } else {
+      // Diritti concessi o aggiornati: ricarica per applicare i nuovi permessi
+      showToast('✅ Permessi aggiornati. Ricaricamento…', 2000);
+      setTimeout(() => window.location.reload(), 2000);
     }
   }, () => {});
 }
@@ -446,8 +452,11 @@ async function clearJudgeVotes() {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
-    // Cancella classifica salvata per forzare ricalcolo
-    await deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{});
+    // Cancella TUTTA la classifica (serata + festival) per forzare ricalcolo
+    await Promise.all([
+      deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{}),
+      deleteDoc(doc(db,'jury_ranking','festival')).catch(()=>{}),
+    ]);
     // Ri-renderizza griglia vuota e lista
     renderVotesGrid(judgeName);
     renderJudgesPreview();
@@ -474,12 +483,17 @@ async function saveJudgeVotes() {
   }
 
   try {
+    // Cancella classifiche esistenti: ogni modifica ai voti richiede ricalcolo obbligatorio
+    await Promise.all([
+      deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{}),
+      deleteDoc(doc(db,'jury_ranking','festival')).catch(()=>{}),
+    ]);
     await setDoc(doc(db,'jury_votes',`s${currentSerata}`), {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
     renderJudgesCompletion();
-    showToast(`✓ Voti di ${judgeName} salvati`);
+    showToast(`✓ Voti di ${judgeName} salvati — ricalcolo classifica necessario`);
   } catch(e) {
     showToast('Errore: ' + e.message);
   }
