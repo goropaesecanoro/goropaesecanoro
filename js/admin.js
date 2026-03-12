@@ -108,6 +108,32 @@ async function saveSingers(serata) {
   if (list.length === 0) { showToast('Inserisci almeno un cantante'); return; }
   await setDoc(doc(db,'singers',`s${serata}`), { list, updatedAt: serverTimestamp() });
   singers[serata] = list;
+
+  // Propaga i nuovi nomi/canzoni a singers/s3 se già esiste,
+  // mantenendo l'ordine salvato e aggiornando solo i dati
+  if (serata === 1 || serata === 2) {
+    try {
+      const s3Snap = await getDoc(doc(db,'singers','s3'));
+      if (s3Snap.exists() && s3Snap.data().list?.length > 0) {
+        // Costruisci mappa nome→{name,song} dalle due serate aggiornate
+        const otherSerata = serata === 1 ? singers[2] : singers[1];
+        const norm = (l, sn) => (l||[]).map(s => typeof s==='string'
+          ? {name:s, song:'', serataNum:sn} : {...s, serataNum:sn});
+        const updatedMap = {};
+        [...norm(list, serata), ...norm(otherSerata, serata === 1 ? 2 : 1)]
+          .forEach(s => { updatedMap[s.name] = s; });
+
+        // Riapplica sull'ordine esistente di S3
+        const s3Updated = s3Snap.data().list.map(s => {
+          const name = typeof s === 'string' ? s : s.name;
+          const updated = updatedMap[name];
+          return updated ? {name: updated.name, song: updated.song} : {name, song: s.song||''};
+        });
+        await setDoc(doc(db,'singers','s3'), { list: s3Updated, updatedAt: serverTimestamp() });
+      }
+    } catch(e) { /* S3 non aggiornato — non bloccare il salvataggio principale */ }
+  }
+
   showToast(`Cantanti Serata ${serata} salvati ✓`);
   closeOverlay('overlay-singers');
 }
