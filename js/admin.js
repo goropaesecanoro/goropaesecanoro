@@ -16,6 +16,7 @@ import {
 let currentSerata = 1;
 let appConfig     = {};
 let singers       = { 1: [...DEFAULT_SINGERS[1]], 2: [...DEFAULT_SINGERS[2]] };
+let rankingInterval = null; // auto-refresh classifica live
 
 // ══════════════════════════════════════════════
 //  INIT
@@ -148,9 +149,13 @@ function renderAdminPanel(user, isSuperAdmin = false) {
   updateSerataLabel();
   updateSwitches();
   refreshRanking();
+  // Avvia auto-refresh se votazioni già aperte
+  updateRankingAutoRefresh(appConfig.votoAperto !== false);
 }
 
 function updateSerataLabel() {
+  // Reset auto-refresh sul cambio serata
+  updateRankingAutoRefresh(appConfig.votoAperto !== false);
   const el = document.getElementById('current-serata-label');
   if (el) el.textContent = SERATA_LABELS[currentSerata];
   // Mostra/nascondi tasto classifica finale Z-score
@@ -227,6 +232,18 @@ async function toggleVoto(checked) {
   if (checked) await saveConfig({ mostraTop5: false, svelaClassifica: false });
   updateSwitches();
   showToast(checked ? '🟢 Votazioni aperte' : '🔴 Votazioni chiuse');
+  // Aggiorna classifica immediatamente + gestisci auto-refresh
+  await refreshRanking();
+  updateRankingAutoRefresh(checked);
+}
+
+function updateRankingAutoRefresh(votoAperto) {
+  // Ferma sempre il timer esistente
+  if (rankingInterval) { clearInterval(rankingInterval); rankingInterval = null; }
+  // Avvia solo se votazioni aperte
+  if (votoAperto) {
+    rankingInterval = setInterval(() => refreshRanking(), 18000); // ogni 18 secondi
+  }
 }
 
 function blockIfVotoAperto(checkbox, prevValue) {
@@ -721,7 +738,6 @@ function searchUsers(q) {
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
         <button class="btn-role ${isAdmin ? 'btn-role-revoke' : 'btn-role-assign'}"
-          ${isNotaio && isAdmin ? 'disabled title="Rimuovi prima il ruolo Notaio"' : ''}
           onclick="confirmRoleAction('${p.uid}','admin','${isAdmin ? 'revoke' : 'assign'}','${label}')">
           ${isAdmin ? '✕ Admin' : '+ Admin'}
         </button>
