@@ -113,21 +113,24 @@ async function saveSingers(serata) {
   // mantenendo l'ordine salvato e aggiornando solo i dati
   if (serata === 1 || serata === 2) {
     try {
-      const s3Snap = await getDoc(doc(db,'singers','s3'));
+      const otherKey = serata === 1 ? 's2' : 's1';
+      const [s3Snap, otherSnap] = await Promise.all([
+        getDoc(doc(db,'singers','s3')),
+        getDoc(doc(db,'singers', otherKey))
+      ]);
       if (s3Snap.exists() && s3Snap.data().list?.length > 0) {
-        // Costruisci mappa nome→{name,song} dalle due serate aggiornate
-        const otherSerata = serata === 1 ? singers[2] : singers[1];
-        const norm = (l, sn) => (l||[]).map(s => typeof s==='string'
-          ? {name:s, song:'', serataNum:sn} : {...s, serataNum:sn});
+        const norm = l => (l||[]).map(s => typeof s==='string' ? {name:s,song:''} : s);
+        const otherList = otherSnap.exists() ? norm(otherSnap.data().list) : [];
+
+        // Mappa nome→{name,song} con i dati freschi di entrambe le serate
         const updatedMap = {};
-        [...norm(list, serata), ...norm(otherSerata, serata === 1 ? 2 : 1)]
-          .forEach(s => { updatedMap[s.name] = s; });
+        [...norm(list), ...otherList].forEach(s => { updatedMap[s.name] = s; });
 
         // Riapplica sull'ordine esistente di S3
         const s3Updated = s3Snap.data().list.map(s => {
           const name = typeof s === 'string' ? s : s.name;
-          const updated = updatedMap[name];
-          return updated ? {name: updated.name, song: updated.song} : {name, song: s.song||''};
+          const found = updatedMap[name];
+          return found ? {name: found.name, song: found.song||''} : {name, song: s.song||''};
         });
         await setDoc(doc(db,'singers','s3'), { list: s3Updated, updatedAt: serverTimestamp() });
       }
