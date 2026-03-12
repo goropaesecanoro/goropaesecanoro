@@ -42,8 +42,8 @@
 
   <!-- Header -->
   <div class="admin-top">
-    <h2>Pannello <span style="color:var(--gold)">Admin</span></h2>
-    <span class="badge-admin">Admin</span>
+    <h2>Pannello <span style="color:var(--gold)" id="admin-title-label">Admin</span></h2>
+    <span class="badge-admin" id="admin-badge-label">Admin</span>
     <div class="user-chip">
       <div class="user-avatar" id="admin-user-initials">?</div>
       <span id="admin-user-name">…</span>
@@ -159,6 +159,33 @@
       <button class="btn-secondary" onclick="exportCSV()">📥 Esporta CSV serata corrente</button>
       <button class="btn-secondary btn-danger" onclick="confirmReset()">🗑️ Azzera voti serata corrente</button>
       <button class="btn-secondary" onclick="signOutAdmin()">← Esci dall'area admin</button>
+    </div>
+  </div>
+
+
+  <!-- ── 6. Gestione Accessi (solo Super-Admin) ── -->
+  <div class="admin-section" id="section-gestione-accessi" style="display:none">
+    <div class="admin-section-title">Gestione Accessi</div>
+
+    <!-- Barra di ricerca -->
+    <div style="position:relative;margin-bottom:14px">
+      <input type="text" id="access-search" placeholder="Cerca per nome, email o telefono…"
+        oninput="searchUsers(this.value)"
+        style="width:100%;padding:12px 16px;background:var(--surf2);border:1px solid rgba(255,255,255,.08);border-radius:100px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;box-sizing:border-box">
+    </div>
+    <div id="access-results" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p id="access-hint" style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px">
+      Digita almeno 2 caratteri per cercare
+    </p>
+  </div>
+
+  <!-- Overlay conferma ruolo -->
+  <div class="overlay" id="overlay-access-confirm" style="display:none">
+    <div class="overlay-box">
+      <h3 id="access-confirm-title">Conferma</h3>
+      <p id="access-confirm-body"></p>
+      <button class="btn-overlay-ok" id="access-confirm-btn" onclick="executeRoleAction()">Conferma</button>
+      <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-access-confirm')">Annulla</button>
     </div>
   </div>
 
