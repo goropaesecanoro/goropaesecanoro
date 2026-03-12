@@ -25,6 +25,25 @@ function normSinger(s) {
   return typeof s === 'string' ? { name: s, song: '' } : s;
 }
 
+
+// ══════════════════════════════════════════════
+//  PROFILO UTENTE
+// ══════════════════════════════════════════════
+async function saveUserProfile(user) {
+  const profile = {
+    uid:         user.uid,
+    displayName: user.displayName || null,
+    email:       user.email       || null,
+    phoneNumber: user.phoneNumber || null,
+    lastSeen:    new Date().toISOString(),
+  };
+  // createdAt solo se non esiste ancora
+  const ref  = doc(db, 'user_profiles', user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) profile.createdAt = new Date().toISOString();
+  await setDoc(ref, profile, { merge: true });
+}
+
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
@@ -75,6 +94,8 @@ async function evaluateState(user) {
     window.location.href = 'admin.html';
     return;
   }
+  // Salva/aggiorna profilo utente al primo accesso
+  saveUserProfile(user).catch(() => {});
   await loadSingers();
   updateSerataUI();
 

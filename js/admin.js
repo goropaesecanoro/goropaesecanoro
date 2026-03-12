@@ -9,7 +9,7 @@ import { signOutUser } from './auth.js';
 import { onAuthStateChanged }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   doc, getDoc, setDoc, getDocs,
-  collection, deleteDoc, serverTimestamp
+  collection, deleteDoc, serverTimestamp, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Stato ─────────────────────────────────────
@@ -56,7 +56,14 @@ export async function initAdminApp() {
       const btn = document.getElementById('btn-goto-notaio');
       if (btn) btn.style.display = notaioSnap.exists() ? '' : 'none';
     } catch(e) {}
-    renderAdminPanel(user);
+    // Verifica superadmin
+    let isSuperAdmin = false;
+    try {
+      const superSnap = await getDoc(doc(db,'superadmins',user.uid));
+      isSuperAdmin = superSnap.exists();
+    } catch(e) {}
+    renderAdminPanel(user, isSuperAdmin);
+    if (isSuperAdmin) initSuperAdmin();
     showScreen('screen-admin');
   });
 }
@@ -126,11 +133,18 @@ function renderSingersEditor(serata) {
 // ══════════════════════════════════════════════
 //  RENDER PANNELLO
 // ══════════════════════════════════════════════
-function renderAdminPanel(user) {
+function renderAdminPanel(user, isSuperAdmin = false) {
   const name = user.displayName || user.email || 'Admin';
   const init = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('admin-user-initials').textContent = init;
   document.getElementById('admin-user-name').textContent     = name.split(' ')[0];
+  if (isSuperAdmin) {
+    const lbl = document.getElementById('admin-title-label');
+    const bdg = document.getElementById('admin-badge-label');
+    if (lbl) lbl.textContent = 'Admin+';
+    if (bdg) { bdg.textContent = 'Super Admin'; bdg.style.background = 'linear-gradient(135deg,#b36bff,#7b2fff)'; }
+    document.getElementById('section-gestione-accessi').style.display = '';
+  }
   updateSerataLabel();
   updateSwitches();
   refreshRanking();
@@ -624,6 +638,150 @@ function closeOverlay(id) { const el = document.getElementById(id); if(el) el.st
 // ══════════════════════════════════════════════
 //  EXPOSE TO WINDOW
 // ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  SUPER-ADMIN — GESTIONE ACCESSI
+// ══════════════════════════════════════════════
+let allProfiles   = [];   // cache profili caricati
+let pendingAction = null; // { uid, role, action: 'assign'|'revoke' }
+
+async function initSuperAdmin() {
+  try {
+    const [profilesSnap, adminsSnap, notaiSnap] = await Promise.all([
+      getDocs(collection(db, 'user_profiles')),
+      getDocs(collection(db, 'admins')),
+      getDocs(collection(db, 'notai')),
+    ]);
+    const adminUids  = new Set(adminsSnap.docs.map(d => d.id));
+    const notaiUids  = new Set(notaiSnap.docs.map(d => d.id));
+    allProfiles = [];
+    profilesSnap.forEach(d => allProfiles.push({
+      uid:      d.id,
+      ...d.data(),
+      isAdmin:  adminUids.has(d.id),
+      isNotaio: notaiUids.has(d.id),
+    }));
+  } catch(e) {
+    showToast('Errore caricamento profili utente');
+  }
+}
+
+function searchUsers(q) {
+  const hint = document.getElementById('access-hint');
+  const res  = document.getElementById('access-results');
+  q = q.trim().toLowerCase();
+  if (q.length < 2) {
+    res.innerHTML = '';
+    hint.style.display = '';
+    return;
+  }
+  hint.style.display = 'none';
+
+  const matches = allProfiles.filter(p => {
+    const name  = (p.displayName || '').toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const phone = (p.phoneNumber || '').toLowerCase();
+    return name.includes(q) || email.includes(q) || phone.includes(q);
+  });
+
+  if (!matches.length) {
+    res.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center">Nessun utente trovato</p>';
+    return;
+  }
+
+  res.innerHTML = matches.map(p => {
+    const label    = p.displayName || p.phoneNumber || p.email || p.uid;
+    const sub      = p.displayName ? (p.email || p.phoneNumber || '') : '';
+    const isAdmin  = p.isAdmin  || false;
+    const isNotaio = p.isNotaio || false;
+    return `
+    <div class="access-card" data-uid="${p.uid}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="s-name" style="font-size:14px">${label}</span>
+          ${isAdmin  ? '<span class="role-badge admin-badge">Admin</span>'  : ''}
+          ${isNotaio ? '<span class="role-badge notaio-badge">Notaio</span>' : ''}
+        </div>
+        ${sub ? `<div class="s-song" style="font-size:12px;margin-top:2px">${sub}</div>` : ''}
+        ${!p.displayName && p.phoneNumber ? `<button class="btn-edit-name" onclick="editProfileName('${p.uid}','${label}')">✏️ Aggiungi nome</button>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+        <button class="btn-role ${isAdmin ? 'btn-role-revoke' : 'btn-role-assign'}"
+          onclick="confirmRoleAction('${p.uid}','admin','${isAdmin ? 'revoke' : 'assign'}','${label}')">
+          ${isAdmin ? '✕ Admin' : '+ Admin'}
+        </button>
+        <button class="btn-role ${isNotaio ? 'btn-role-revoke' : 'btn-role-assign'}"
+          onclick="confirmRoleAction('${p.uid}','notaio','${isNotaio ? 'revoke' : 'assign'}','${label}')">
+          ${isNotaio ? '✕ Notaio' : '+ Notaio'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function confirmRoleAction(uid, role, action, label) {
+  pendingAction = { uid, role, action };
+  const roleLabel = role === 'admin' ? 'Admin' : 'Notaio';
+  document.getElementById('access-confirm-title').textContent =
+    action === 'assign' ? `Assegna ruolo ${roleLabel}` : `Revoca ruolo ${roleLabel}`;
+  document.getElementById('access-confirm-body').textContent =
+    action === 'assign'
+      ? `Vuoi assegnare il ruolo ${roleLabel} a ${label}?`
+      : `Vuoi revocare il ruolo ${roleLabel} a ${label}?`;
+  const btn = document.getElementById('access-confirm-btn');
+  btn.textContent = action === 'assign' ? 'Sì, assegna' : 'Sì, revoca';
+  btn.style.background = action === 'revoke'
+    ? 'linear-gradient(135deg,#E85D5D,#a03030)' : '';
+  btn.style.color = action === 'revoke' ? '#fff' : '';
+  openOverlay('overlay-access-confirm');
+}
+
+async function executeRoleAction() {
+  if (!pendingAction) return;
+  closeOverlay('overlay-access-confirm');
+  const { uid, role, action } = pendingAction;
+  pendingAction = null;
+  const collName = role === 'admin' ? 'admins' : 'notai';
+  try {
+    if (action === 'assign') {
+      await setDoc(doc(db, collName, uid), { assignedAt: serverTimestamp() });
+    } else {
+      await deleteDoc(doc(db, collName, uid));
+    }
+    // Aggiorna cache locale
+    const p = allProfiles.find(x => x.uid === uid);
+    if (p) {
+      if (role === 'admin')  p.isAdmin  = action === 'assign';
+      if (role === 'notaio') p.isNotaio = action === 'assign';
+    }
+    showToast(action === 'assign' ? `✓ Ruolo assegnato` : `✓ Ruolo revocato`);
+    // Rifresca i risultati
+    searchUsers(document.getElementById('access-search').value);
+  } catch(e) {
+    showToast('Errore: ' + e.message);
+  }
+}
+
+// Modifica nome manuale per utenti con solo telefono
+function editProfileName(uid, currentLabel) {
+  const name = prompt(`Nome da associare a ${currentLabel}:`, '');
+  if (!name?.trim()) return;
+  setDoc(doc(db,'user_profiles',uid), { displayName: name.trim() }, { merge: true })
+    .then(() => {
+      const p = allProfiles.find(x => x.uid === uid);
+      if (p) p.displayName = name.trim();
+      showToast('✓ Nome salvato');
+      searchUsers(document.getElementById('access-search').value);
+    })
+    .catch(e => showToast('Errore: ' + e.message));
+}
+
+function openOverlay(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+
+
 window.openSerataChooser      = openSerataChooser;
 window.selectPendingSerata    = selectPendingSerata;
 window.confirmSerataChange    = confirmSerataChange;
@@ -650,5 +808,9 @@ window.openSingersEditor = (s) => {
 };
 window.saveSingersOverlay     = () => saveSingers(window._editingSerata);
 window.signOutAdmin           = adminSignOut;
+window.searchUsers            = searchUsers;
+window.confirmRoleAction      = confirmRoleAction;
+window.executeRoleAction      = executeRoleAction;
+window.editProfileName        = editProfileName;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
