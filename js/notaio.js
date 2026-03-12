@@ -460,7 +460,8 @@ async function clearJudgeVotes() {
     // Ri-renderizza griglia vuota e lista
     renderVotesGrid(judgeName);
     renderJudgesPreview();
-    showToast(`✓ Voti di ${judgeName} eliminati — classifica azzerata`);
+    showToast(`✓ Voti di ${judgeName} eliminati — ricaricamento in corso…`);
+    setTimeout(() => window.location.reload(), 2000);
   } catch(e) {
     showToast('Errore: ' + e.message);
   }
@@ -493,7 +494,8 @@ async function saveJudgeVotes() {
       updatedAt: serverTimestamp()
     });
     renderJudgesCompletion();
-    showToast(`✓ Voti di ${judgeName} salvati — ricalcolo classifica necessario`);
+    showToast(`✓ Voti di ${judgeName} salvati — ricaricamento in corso…`);
+    setTimeout(() => window.location.reload(), 2000);
   } catch(e) {
     showToast('Errore: ' + e.message);
   }
