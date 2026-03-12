@@ -80,18 +80,7 @@ async function showClosedScreen() {
   if (dynEl) dynEl.innerHTML = '';
 
   if (appConfig.svelaClassifica && currentSerata === 3) {
-    await renderReveal();
-    // Se mostraTop5Finale è attivo, inietta la classifica festival sopra quella pubblica
-    const festDiv = document.getElementById('reveal-festival-section');
-    if (festDiv) {
-      if (appConfig.mostraTop5Finale) {
-        const festHtml = await renderTop5Finale();
-        festDiv.innerHTML = festHtml || '';
-        festDiv.style.display = festHtml ? '' : 'none';
-      } else {
-        festDiv.style.display = 'none';
-      }
-    }
+    await buildRevealScreen();
     showScreen('screen-reveal');
     return;
   }
@@ -214,6 +203,91 @@ async function renderTop5Finale() {
   } catch(e) { return ''; }
 }
 
+// Costruisce screen-reveal con le sezioni festival e/o pubblica
+async function buildRevealScreen() {
+  const festDiv   = document.getElementById('reveal-festival-section');
+  const pubDiv    = document.getElementById('reveal-public-section');
+
+  // ── Sezione classifica festival (giuria+bonus) ──
+  if (appConfig.mostraTop5Finale && festDiv) {
+    const festHtml = await renderTop5Finale();
+    if (festHtml) {
+      // Wrappa con header e disclaimer dedicati
+      festDiv.innerHTML = `
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Classifica del Festival</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5">Vincitori ufficiali — giuria tecnica + voto del pubblico</div>
+        </div>
+        ${festHtml}`;
+      festDiv.style.display = '';
+    } else {
+      festDiv.style.display = 'none';
+    }
+  } else if (festDiv) {
+    festDiv.style.display = 'none';
+  }
+
+  // ── Sezione classifica pubblica ──
+  if (pubDiv) {
+    const pubHtml = await buildPublicRankingHtml();
+    const hasFest = festDiv && festDiv.style.display !== 'none';
+    pubDiv.innerHTML = `
+      <div style="text-align:center;margin-bottom:16px${hasFest ? ';margin-top:32px' : ''}">
+        <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Voto del Pubblico</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">
+          Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
+          <span style="font-size:11px;opacity:.7">Non include la giuria tecnica</span>
+        </div>
+      </div>
+      <div class="summary-table">${pubHtml}</div>`;
+  }
+}
+
+// Calcola e restituisce le righe HTML della classifica pubblica serata 3
+async function buildPublicRankingHtml() {
+  try {
+    // Prima controlla se esiste una classifica salvata
+    const saved = await getDoc(doc(db,'config','finalRanking'));
+    if (saved.exists()) {
+      const ranking = saved.data().ranking;
+      const labels  = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+      const songMap = {};
+      singers.forEach(s => { songMap[s.name] = s.song || ''; });
+      return ranking.map((c,i) => {
+        const name = c.name || c;
+        const song = songMap[name] || '';
+        return `<div class="summary-row">
+          <span class="s-rank" style="font-size:20px">${labels[i]||''}</span>
+          <div class="s-info">
+            <div class="s-name">${name}</div>
+            ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {}
+  // Fallback: calcola dal vivo da votes_s3
+  const snap = await getDocs(collection(db,'votes_s3'));
+  const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
+  const scores = {}; singers.forEach(s => scores[s.name] = 0);
+  allVotes.forEach(({vote}) =>
+    vote?.forEach((name,i) => { if(scores[name]!==undefined) scores[name]+=POINTS[i]; })
+  );
+  const ranking = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const labels  = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+  const songMap = {};
+  singers.forEach(s => { songMap[s.name] = s.song||''; });
+  return ranking.map(([name],i) => `
+    <div class="summary-row">
+      <span class="s-rank" style="font-size:20px">${labels[i]||''}</span>
+      <div class="s-info">
+        <div class="s-name">${name}</div>
+        ${songMap[name] ? `<div class="s-song">♪ ${songMap[name]}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// Mantenuto per compatibilità — non più usato direttamente
 async function renderReveal() {
   try {
     const saved = await getDoc(doc(db,'config','finalRanking'));

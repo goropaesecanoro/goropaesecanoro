@@ -145,9 +145,13 @@ function updateSerataLabel() {
   // Mostra/nascondi pulsante ordine finale
   const oBtn = document.getElementById('btn-ordine-finale');
   if (oBtn) oBtn.style.display = currentSerata === 3 ? '' : 'none';
-  // Mostra/nascondi toggle top5 finale festival
-  const t5f = document.getElementById('toggle-top5finale-wrap');
-  if (t5f) t5f.style.display = currentSerata === 3 ? '' : 'none';
+
+  const is3 = currentSerata === 3;
+  // Serate 1-2: mostra top5 pubblico, nascondi svela e top5finale
+  document.getElementById('toggle-top5-wrap')?.style.setProperty('display', is3 ? 'none' : '');
+  // Serata 3: mostra svela e top5finale, nascondi top5 pubblico
+  document.getElementById('toggle-top5finale-wrap')?.style.setProperty('display', is3 ? '' : 'none');
+  document.getElementById('toggle-svela-wrap')?.style.setProperty('display',      is3 ? '' : 'none');
 }
 
 function updateSwitches() {
@@ -157,8 +161,8 @@ function updateSwitches() {
   setSwitchState('toggle-svela',      !!appConfig.svelaClassifica);
   const votoAperto = appConfig.votoAperto !== false;
   document.getElementById('toggle-top5-wrap')?.classList.toggle('disabled', votoAperto);
-  document.getElementById('toggle-top5finale-wrap')?.classList.toggle('disabled', votoAperto || currentSerata !== 3);
-  document.getElementById('toggle-svela-wrap')?.classList.toggle('disabled', votoAperto || currentSerata !== 3);
+  document.getElementById('toggle-top5finale-wrap')?.classList.toggle('disabled', votoAperto);
+  document.getElementById('toggle-svela-wrap')?.classList.toggle('disabled', votoAperto);
 }
 
 function setSwitchState(id, state) {
