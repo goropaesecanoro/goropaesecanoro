@@ -6,12 +6,13 @@ import { auth, db, showScreen, showToast, generateStars, DEFAULT_SINGERS, POINTS
   from './firebase-init.js';
 import { GoogleAuthProvider, signInWithPopup, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { doc, getDoc, getDocs, setDoc, collection, serverTimestamp }
+import { doc, getDoc, getDocs, setDoc, collection, serverTimestamp, onSnapshot, deleteDoc }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── Stato locale ──────────────────────────────
 let currentUser    = null;
 let currentSerata  = 1;
+let _unsubRights   = null; // listener revoca diritti notaio
 let singers        = [];   // [{name, song}] della serata corrente
 let judges         = [];   // [{name, isCritic}]
 let draftVotes     = {};   // {judgeName: {singerName: {int, int}}}
@@ -41,6 +42,7 @@ auth.onAuthStateChanged(async user => {
     return;
   }
   currentUser = user;
+  startNotaioRightsWatcher(user.uid);
   await initNotaio();
 });
 
@@ -188,9 +190,10 @@ function renderJudgesCompletion() {
   renderJudgesPreview();
 }
 
-function selectJudge(judgeName) {
-  // Secondo tap sullo stesso giudice — chiudi
+async function selectJudge(judgeName) {
+  // Secondo tap sullo stesso giudice — chiudi e rilascia lock
   if (selectedJudge === judgeName) {
+    await releaseJudgeLock(currentSerata, selectedJudge);
     selectedJudge = '';
     syncHiddenSelector('');
     renderJudgesPreview();
@@ -200,6 +203,11 @@ function selectJudge(judgeName) {
     if (actions) actions.style.display = 'none';
     return;
   }
+  // Rilascia eventuale lock precedente
+  if (selectedJudge) await releaseJudgeLock(currentSerata, selectedJudge);
+  // Acquisisci lock sul nuovo giudice
+  const locked = await acquireJudgeLock(currentSerata, judgeName);
+  if (!locked) return;
   selectedJudge = judgeName;
   syncHiddenSelector(judgeName);
   renderJudgesPreview();

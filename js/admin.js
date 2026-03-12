@@ -9,14 +9,15 @@ import { signOutUser } from './auth.js';
 import { onAuthStateChanged }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   doc, getDoc, setDoc, getDocs,
-  collection, deleteDoc, serverTimestamp, query, orderBy, limit, where
+  collection, deleteDoc, serverTimestamp, query, orderBy, limit, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Stato ─────────────────────────────────────
 let currentSerata = 1;
 let appConfig     = {};
 let singers       = { 1: [...DEFAULT_SINGERS[1]], 2: [...DEFAULT_SINGERS[2]] };
-let rankingInterval = null; // auto-refresh classifica live
+let rankingInterval   = null; // auto-refresh classifica live
+let _unsubRights      = null; // listener revoca diritti
 
 // ══════════════════════════════════════════════
 //  INIT
@@ -65,6 +66,7 @@ export async function initAdminApp() {
     } catch(e) {}
     renderAdminPanel(user, isSuperAdmin);
     if (isSuperAdmin) initSuperAdmin();
+    startRightsWatcher(user.uid);
     showScreen('screen-admin');
   });
 }
@@ -125,6 +127,7 @@ async function saveSingers(serata) {
     } catch(e) { showToast('⚠️ s3 non aggiornato: ' + e.message); }
   }
 
+  releaseLock(`singers_s${serata}`);
   showToast(`Cantanti Serata ${serata} salvati ✓`);
   closeOverlay('overlay-singers');
 }
@@ -151,6 +154,25 @@ function renderSingersEditor(serata) {
 // ══════════════════════════════════════════════
 //  RENDER PANNELLO
 // ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  WATCHER REVOCA DIRITTI IN TEMPO REALE
+// ══════════════════════════════════════════════
+function startRightsWatcher(uid) {
+  if (_unsubRights) _unsubRights();
+  _unsubRights = onSnapshot(doc(db, 'admins', uid), snap => {
+    if (!snap.exists()) {
+      // Diritti revocati: forza logout immediato
+      showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
+      setTimeout(async () => {
+        if (_unsubRights) { _unsubRights(); _unsubRights = null; }
+        await signOutUser();
+        showScreen('screen-admin-login');
+      }, 2500);
+    }
+  }, () => {}); // ignora errori di rete
+}
+
 function renderAdminPanel(user, isSuperAdmin = false) {
   const name = user.displayName || user.email || 'Admin';
   const init = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -566,6 +588,8 @@ async function resetVotes() {
 let _finalOrderList = []; // [{name, song, serataNum}]
 
 async function openFinalOrderEditor() {
+  const locked = await acquireLock('final_order');
+  if (!locked) return;
   // S3 è sempre aggiornato da saveSingers — lo leggiamo direttamente
   // e aggiungiamo serataNum per visualizzazione (S1=primi 7, S2=secondi 7)
   const s3Snap = await getDoc(doc(db,'singers','s3'));
@@ -632,6 +656,7 @@ async function saveFinalOrder() {
   try {
     const list = _finalOrderList.map(({name, song, serataNum}) => ({name, song, serataNum: serataNum||0}));
     await setDoc(doc(db,'singers','s3'), { list, updatedAt: serverTimestamp() });
+    releaseLock('final_order');
     showToast('✓ Ordine finale salvato');
     closeOverlay('overlay-order');
     // Aggiorna singers in memoria
@@ -858,10 +883,12 @@ window.saveSingersOverlay     = () => saveSingers(window._editingSerata);
 window.signOutAdmin           = adminSignOut;
 window.searchUsers            = searchUsers;
 window.refreshProfiles        = refreshProfiles;
+window.forceUnlockAll         = forceUnlockAll;
 window.refreshProfiles         = refreshProfiles;
 window.confirmRoleAction      = confirmRoleAction;
 window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
 window.refreshProfiles        = refreshProfiles;
+window.forceUnlockAll         = forceUnlockAll;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
