@@ -645,21 +645,13 @@ function closeOverlay(id) { const el = document.getElementById(id); if(el) el.st
 let allProfiles   = [];   // cache profili caricati
 let pendingAction = null; // { uid, role, action: 'assign'|'revoke' }
 
-async function refreshProfiles() {
-  const btn = document.querySelector('#section-gestione-accessi .admin-section-title button');
-  if (btn) { btn.style.opacity = '.4'; btn.style.pointerEvents = 'none'; }
-  await initSuperAdmin();
-  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-  const q = document.getElementById('access-search')?.value || '';
-  if (q.length >= 2) searchUsers(q);
-  showToast('✓ Lista aggiornata');
-}
-
 async function initSuperAdmin() {
   await refreshProfiles(false);
 }
 
 async function refreshProfiles(showFeedback = true) {
+  const btn = document.querySelector('#section-gestione-accessi .admin-section-title button');
+  if (btn) { btn.style.opacity = '.4'; btn.style.pointerEvents = 'none'; }
   try {
     const [profilesSnap, adminsSnap, notaiSnap] = await Promise.all([
       getDocs(collection(db, 'user_profiles')),
@@ -683,6 +675,8 @@ async function refreshProfiles(showFeedback = true) {
     }
   } catch(e) {
     showToast('Errore caricamento profili utente');
+  } finally {
+    if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
   }
 }
 
