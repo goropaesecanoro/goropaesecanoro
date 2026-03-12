@@ -671,6 +671,8 @@ async function saveFinalOrder() {
 //  SIGN OUT — directo, poi reload
 // ══════════════════════════════════════════════
 async function adminSignOut() {
+  await releaseAllLocks().catch(() => {});
+  if (_unsubRights) { _unsubRights(); _unsubRights = null; }
   const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
   await signOut(auth);
   window.location.reload();
@@ -869,9 +871,62 @@ window.computeAndShowFinalRanking = computeAndShowFinalRanking;
 window.exportCSV              = exportCSV;
 window.confirmReset           = () => openOverlay('overlay-reset');
 window.resetVotes             = resetVotes;
+
+// ══════════════════════════════════════════════
+//  LOCK EDITOR CONCORRENTE
+// ══════════════════════════════════════════════
+const LOCK_TTL_MS = 120_000;
+
+async function acquireLock(key) {
+  const ref = doc(db, 'editing_locks', key);
+  const now = Date.now();
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.expiresAt > now && d.uid !== auth.currentUser?.uid) {
+        const ago = Math.round((now - d.lockedAt) / 1000);
+        showToast(`⚠️ ${d.name} sta già modificando questo contenuto (${ago}s fa)`, 4000);
+        return false;
+      }
+    }
+    await setDoc(ref, {
+      uid:       auth.currentUser.uid,
+      name:      auth.currentUser.displayName || auth.currentUser.email || 'Admin',
+      lockedAt:  now,
+      expiresAt: now + LOCK_TTL_MS,
+    });
+    return true;
+  } catch(e) { return true; }
+}
+
+async function releaseLock(key) {
+  try {
+    const ref  = doc(db, 'editing_locks', key);
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().uid === auth.currentUser?.uid) await deleteDoc(ref);
+  } catch(e) {}
+}
+
+async function releaseAllLocks() {
+  const keys = ['singers_s1', 'singers_s2', 'final_order'];
+  await Promise.all(keys.map(k => releaseLock(k)));
+}
+
+async function forceUnlockAll() {
+  try {
+    const snap = await getDocs(collection(db, 'editing_locks'));
+    if (snap.empty) { showToast('Nessun lock attivo'); return; }
+    await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'editing_locks', d.id))));
+    showToast(`🔓 ${snap.size} lock rimoss${snap.size === 1 ? 'o' : 'i'}`);
+  } catch(e) { showToast('Errore: ' + e.message); }
+}
+
 window.saveSingersAdmin       = saveSingers;
-window.openSingersEditor = (s) => {
-  // Mostra solo l'editor della serata selezionata, nasconde l'altro
+window.openSingersEditor = async (s) => {
+  window._editingSerata = s;
+  const locked = await acquireLock(`singers_s${s}`);
+  if (!locked) return;
   [1,2].forEach(n => {
     const el = document.getElementById(`singers-editor-s${n}`);
     if (el) el.style.display = n === s ? 'block' : 'none';
@@ -884,11 +939,8 @@ window.signOutAdmin           = adminSignOut;
 window.searchUsers            = searchUsers;
 window.refreshProfiles        = refreshProfiles;
 window.forceUnlockAll         = forceUnlockAll;
-window.refreshProfiles         = refreshProfiles;
 window.confirmRoleAction      = confirmRoleAction;
 window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
-window.refreshProfiles        = refreshProfiles;
-window.forceUnlockAll         = forceUnlockAll;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
