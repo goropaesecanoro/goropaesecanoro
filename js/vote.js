@@ -421,6 +421,9 @@ function setupVotingScreen(user) {
     isPhone ? ('…'+name.slice(-4)) : name.split(' ')[0];
 
   selections = [null,null,null,null,null];
+  // Reset pulsante — potrebbe essere rimasto a "Salvataggio…" da una sessione precedente
+  const btnSubmit = document.getElementById('btn-submit');
+  if (btnSubmit) { btnSubmit.textContent = 'Conferma il voto 🎤'; btnSubmit.disabled = true; }
   renderSingers();
   renderSlots();
   updateAll();
@@ -531,7 +534,15 @@ function updateProgress() {
   const filled = selections.filter(s => s !== null).length;
   document.getElementById('progress-fill').style.width = (filled/5*100)+'%';
   document.getElementById('progress-text').textContent = `${filled} di 5 selezionati`;
-  document.getElementById('btn-submit').disabled = filled < 5 || selections.includes(null);
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = filled < 5 || selections.includes(null);
+
+  // Scroll automatico al pulsante invio quando tutti e 5 sono selezionati
+  if (filled === 5) {
+    setTimeout(() => {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  }
 }
 
 // ══════════════════════════════════════════════
