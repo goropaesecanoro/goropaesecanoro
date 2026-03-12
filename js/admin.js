@@ -59,6 +59,7 @@ export async function initAdminApp() {
     renderAdminPanel(user, isSuperAdmin);
     if (isSuperAdmin) initSuperAdmin();
     startRightsWatcher(user.uid);
+    startJuryRankingWatcher();
     showScreen('screen-admin');
   });
 }
@@ -174,8 +175,9 @@ function startRightsWatcher(uid) {
       showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
       setTimeout(async () => {
         if (_unsubRights) { _unsubRights(); _unsubRights = null; }
-        await signOutUser();
-        showScreen('screen-admin-login');
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+        await signOut(auth);
+        window.location.reload();
       }, 2500);
     } else {
       // Diritti concessi o aggiornati: ricarica per applicare i nuovi permessi
@@ -273,6 +275,7 @@ async function confirmSerataChange() {
   updateSwitches();
   refreshRanking();
   showToast(`✓ ${SERATA_LABELS[currentSerata]} attivata`);
+  if (window._juryListenerUpdate) window._juryListenerUpdate();
 }
 
 // ══════════════════════════════════════════════
@@ -935,6 +938,149 @@ async function forceUnlockAll() {
   } catch(e) { showToast('Errore: ' + e.message); }
 }
 
+
+// ══════════════════════════════════════════════
+//  CLASSIFICA TECNICA IN ADMIN — listener + render
+// ══════════════════════════════════════════════
+let _unsubJuryRanking = null;
+
+function startJuryRankingWatcher() {
+  if (_unsubJuryRanking) return;
+  // Ascolta sia la serata corrente che il festival
+  const checkAndShow = async () => {
+    const serata = currentSerata;
+    const key    = serata === 3 ? 'festival' : `s${serata}`;
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking', key));
+      const sec  = document.getElementById('section-jury-ranking');
+      if (!sec) return;
+      if (snap.exists() && snap.data().ranking?.length) {
+        sec.style.display = '';
+        // Aggiorna label pulsanti in base alla serata
+        const btnFull = document.getElementById('btn-admin-jury-full');
+        const btnTop3 = document.getElementById('btn-admin-top3');
+        if (serata === 3) {
+          if (btnFull) btnFull.textContent = '🏆 Mostra classifica definitiva (tecnica + pubblico)';
+          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 critica per i conduttori';
+        } else {
+          if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
+          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
+        }
+      } else {
+        sec.style.display = 'none';
+      }
+    } catch(e) {}
+  };
+
+  // Snapshot live su jury_ranking per la serata corrente
+  const updateListener = () => {
+    if (_unsubJuryRanking) { _unsubJuryRanking(); _unsubJuryRanking = null; }
+    const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
+    _unsubJuryRanking = onSnapshot(doc(db,'jury_ranking', key), snap => {
+      const sec = document.getElementById('section-jury-ranking');
+      if (!sec) return;
+      if (snap.exists() && snap.data().ranking?.length) {
+        sec.style.display = '';
+        // Toast solo se la classifica appare per la prima volta (non al caricamento pagina)
+        if (!_juryRankingFirstLoad) {
+          showToast('📊 Classifiche disponibili — vedi sezione Classifica giuria tecnica', 5000);
+        }
+        _juryRankingFirstLoad = false;
+        const btnFull = document.getElementById('btn-admin-jury-full');
+        const btnTop3 = document.getElementById('btn-admin-top3');
+        if (currentSerata === 3) {
+          if (btnFull) btnFull.textContent = '🏆 Mostra classifica definitiva (tecnica + pubblico)';
+          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 critica per i conduttori';
+        } else {
+          if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
+          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
+        }
+      } else {
+        sec.style.display = 'none';
+        _juryRankingFirstLoad = true;
+      }
+    }, () => {});
+  };
+
+  updateListener();
+  // Quando cambia serata, rinnova il listener
+  window._juryListenerUpdate = updateListener;
+}
+let _juryRankingFirstLoad = true;
+
+async function adminShowJuryRanking() {
+  openOverlay('overlay-admin-jury');
+  const rows  = document.getElementById('overlay-admin-jury-rows');
+  const title = document.getElementById('overlay-admin-jury-title');
+  rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
+  const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
+  const label = currentSerata === 3 ? 'Classifica definitiva (tecnica + pubblico)' : `Classifica tecnica — ${SERATA_LABELS[currentSerata]}`;
+  if (title) title.textContent = (currentSerata === 3 ? '🏆 ' : '📊 ') + label;
+  try {
+    const snap = await getDoc(doc(db,'jury_ranking', key));
+    if (!snap.exists() || !snap.data().ranking?.length) {
+      rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata dal Notaio.</div>';
+      return;
+    }
+    const ranking = snap.data().ranking;
+    rows.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'ranking-card';
+    card.innerHTML = `<div class="ranking-head" style="grid-template-columns:36px 1fr 70px 70px">
+      <span>#</span><span>Cantante</span>
+      <span style="text-align:right;font-size:11px">Giuria</span>
+      <span style="text-align:right;font-size:11px">Totale</span>
+    </div>`;
+    ranking.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'ranking-row';
+      const juryScore = typeof r.juryScore === 'number' ? r.juryScore.toFixed(4) : '–';
+      const total     = typeof r.totalScore === 'number' ? r.totalScore.toFixed(4)
+                      : typeof r.score === 'number' ? r.score.toFixed(4) : '–';
+      row.style.cssText = 'grid-template-columns:36px 1fr 70px 70px';
+      row.innerHTML = `
+        <span class="r-pos">${i+1}</span>
+        <div style="min-width:0"><div class="r-name">${r.name||r.singer||''}</div></div>
+        <span class="r-pts" style="font-size:12px">${juryScore}</span>
+        <span class="r-pts" style="font-size:12px;color:var(--gold)">${total}</span>`;
+      card.appendChild(row);
+    });
+    rows.appendChild(card);
+  } catch(e) {
+    rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Errore: ' + e.message + '</div>';
+  }
+}
+
+async function adminShowTop3() {
+  openOverlay('overlay-admin-top3');
+  const rows     = document.getElementById('overlay-top3-rows');
+  const title    = document.getElementById('overlay-top3-title');
+  const subtitle = document.getElementById('overlay-top3-subtitle');
+  rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
+  const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
+  if (title) title.textContent = currentSerata === 3 ? '🎤 Top 3 critica' : '🎤 Top 3 — ' + SERATA_LABELS[currentSerata];
+  if (subtitle) subtitle.textContent = currentSerata === 3
+    ? 'I tre migliori per la giuria tecnica — classifica definitiva festival'
+    : 'I tre più votati dalla giuria tecnica di questa serata';
+  try {
+    const snap = await getDoc(doc(db,'jury_ranking', key));
+    if (!snap.exists() || !snap.data().ranking?.length) {
+      rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata.</div>';
+      return;
+    }
+    const top3 = snap.data().ranking.slice(0,3);
+    const medals = ['🥇','🥈','🥉'];
+    rows.innerHTML = top3.map((r,i) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:36px;margin-bottom:4px">${medals[i]}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text)">${r.name||r.singer||''}</div>
+        ${r.song ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">♪ ${r.song}</div>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Errore: ' + e.message + '</div>';
+  }
+}
+
 window.saveSingersAdmin       = saveSingers;
 window.openSingersEditor = async (s) => {
   window._editingSerata = s;
@@ -952,6 +1098,8 @@ window.signOutAdmin           = adminSignOut;
 window.searchUsers            = searchUsers;
 window.refreshProfiles        = refreshProfiles;
 window.forceUnlockAll         = forceUnlockAll;
+window.adminShowJuryRanking    = adminShowJuryRanking;
+window.adminShowTop3           = adminShowTop3;
 window.confirmRoleAction      = confirmRoleAction;
 window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
