@@ -537,11 +537,15 @@ function updateProgress() {
   const btn = document.getElementById('btn-submit');
   btn.disabled = filled < 5 || selections.includes(null);
 
-  // Scroll automatico a "La tua classifica" quando tutti e 5 sono selezionati
+  // Scroll a "La tua classifica" compensando l'header sticky
   if (filled === 5) {
     setTimeout(() => {
-      const slotSection = document.querySelector('.slots-section');
-      if (slotSection) slotSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const slotSection  = document.querySelector('.slots-section');
+      const stickyHeader = document.querySelector('.voting-header');
+      if (!slotSection) return;
+      const offset = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+      const top    = slotSection.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }, 150);
   }
 }
