@@ -164,7 +164,10 @@
 
   <!-- ── 6. Gestione Accessi (solo Super-Admin) ── -->
   <div class="admin-section" id="section-gestione-accessi" style="display:none">
-    <div class="admin-section-title">Gestione Accessi</div>
+    <div class="admin-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Gestione Accessi</span>
+      <button onclick="forceUnlockAll()" class="btn-ghost" style="font-size:12px;padding:4px 10px;border-radius:100px;border:1px solid rgba(232,93,93,.4);color:#E85D5D" title="Rimuovi tutti i lock editor attivi">🔓 Sblocca tutto</button>
+    </div>
 
     <!-- Barra di ricerca -->
     <div style="position:relative;margin-bottom:14px">
