@@ -63,6 +63,13 @@ async function evaluateState(user) {
   const voteSnap = await getDoc(doc(db, `votes_s${currentSerata}`, user.uid));
   if (voteSnap.exists()) {
     renderSummaryTable('already-summary', voteSnap.data().vote);
+    // Messaggio personalizzato per serata finale
+    const alreadyMsg = document.getElementById('already-message');
+    if (alreadyMsg) {
+      alreadyMsg.textContent = currentSerata === 3
+        ? 'Grazie per aver partecipato! Al termine della serata sarà disponibile la classifica reale del festival.'
+        : 'Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.';
+    }
     showScreen('screen-already');
   } else {
     setupVotingScreen(user);
@@ -205,41 +212,44 @@ async function renderTop5Finale() {
 
 // Costruisce screen-reveal con le sezioni festival e/o pubblica
 async function buildRevealScreen() {
-  const festDiv   = document.getElementById('reveal-festival-section');
-  const pubDiv    = document.getElementById('reveal-public-section');
+  const festDiv = document.getElementById('reveal-festival-section');
+  const pubDiv  = document.getElementById('reveal-public-section');
 
-  // ── Sezione classifica festival (giuria+bonus) ──
-  if (appConfig.mostraTop5Finale && festDiv) {
-    const festHtml = await renderTop5Finale();
-    if (festHtml) {
-      // Wrappa con header e disclaimer dedicati
-      festDiv.innerHTML = `
-        <div style="text-align:center;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Classifica del Festival</div>
-          <div style="font-size:12px;color:var(--muted);line-height:1.5">Vincitori ufficiali — giuria tecnica + voto del pubblico</div>
-        </div>
-        ${festHtml}`;
-      festDiv.style.display = '';
+  // ── Sezione 1: classifica festival (giuria+bonus) — solo se mostraTop5Finale ──
+  let hasFest = false;
+  if (festDiv) {
+    if (appConfig.mostraTop5Finale) {
+      const festHtml = await renderTop5Finale();
+      if (festHtml) {
+        festDiv.innerHTML = `
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🏆 Classifica del Festival</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">Vincitori ufficiali — giuria tecnica + voto del pubblico</div>
+          </div>
+          <div class="summary-table">${festHtml}</div>`;
+        festDiv.style.display = '';
+        hasFest = true;
+      } else {
+        festDiv.style.display = 'none';
+      }
     } else {
       festDiv.style.display = 'none';
     }
-  } else if (festDiv) {
-    festDiv.style.display = 'none';
   }
 
-  // ── Sezione classifica pubblica ──
+  // ── Sezione 2: classifica pubblica completa — sempre presente con svelaClassifica ──
   if (pubDiv) {
     const pubHtml = await buildPublicRankingHtml();
-    const hasFest = festDiv && festDiv.style.display !== 'none';
     pubDiv.innerHTML = `
-      <div style="text-align:center;margin-bottom:16px${hasFest ? ';margin-top:32px' : ''}">
-        <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Voto del Pubblico</div>
+      <div style="text-align:center;margin-bottom:16px${hasFest ? ';margin-top:36px' : ''}">
+        <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎤 Voto del Pubblico</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.5">
           Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
-          <span style="font-size:11px;opacity:.7">Non include la giuria tecnica</span>
+          <span style="font-size:11px;opacity:.7">Non include le votazioni della giuria tecnica</span>
         </div>
       </div>
       <div class="summary-table">${pubHtml}</div>`;
+    pubDiv.style.display = '';
   }
 }
 
