@@ -645,15 +645,29 @@ function closeOverlay(id) { const el = document.getElementById(id); if(el) el.st
 let allProfiles   = [];   // cache profili caricati
 let pendingAction = null; // { uid, role, action: 'assign'|'revoke' }
 
+async function refreshProfiles() {
+  const btn = document.querySelector('#section-gestione-accessi .admin-section-title button');
+  if (btn) { btn.style.opacity = '.4'; btn.style.pointerEvents = 'none'; }
+  await initSuperAdmin();
+  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+  const q = document.getElementById('access-search')?.value || '';
+  if (q.length >= 2) searchUsers(q);
+  showToast('✓ Lista aggiornata');
+}
+
 async function initSuperAdmin() {
+  await refreshProfiles(false);
+}
+
+async function refreshProfiles(showFeedback = true) {
   try {
     const [profilesSnap, adminsSnap, notaiSnap] = await Promise.all([
       getDocs(collection(db, 'user_profiles')),
       getDocs(collection(db, 'admins')),
       getDocs(collection(db, 'notai')),
     ]);
-    const adminUids  = new Set(adminsSnap.docs.map(d => d.id));
-    const notaiUids  = new Set(notaiSnap.docs.map(d => d.id));
+    const adminUids = new Set(adminsSnap.docs.map(d => d.id));
+    const notaiUids = new Set(notaiSnap.docs.map(d => d.id));
     allProfiles = [];
     profilesSnap.forEach(d => allProfiles.push({
       uid:      d.id,
@@ -661,6 +675,12 @@ async function initSuperAdmin() {
       isAdmin:  adminUids.has(d.id),
       isNotaio: notaiUids.has(d.id),
     }));
+    if (showFeedback) {
+      showToast(`✓ ${allProfiles.length} profili caricati`);
+      // Aggiorna i risultati visibili se c'è una ricerca attiva
+      const q = document.getElementById('access-search')?.value || '';
+      if (q.length >= 2) searchUsers(q);
+    }
   } catch(e) {
     showToast('Errore caricamento profili utente');
   }
@@ -707,6 +727,7 @@ function searchUsers(q) {
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
         <button class="btn-role ${isAdmin ? 'btn-role-revoke' : 'btn-role-assign'}"
+          ${isNotaio && isAdmin ? 'disabled title="Rimuovi prima il ruolo Notaio"' : ''}
           onclick="confirmRoleAction('${p.uid}','admin','${isAdmin ? 'revoke' : 'assign'}','${label}')">
           ${isAdmin ? '✕ Admin' : '+ Admin'}
         </button>
@@ -724,10 +745,16 @@ function confirmRoleAction(uid, role, action, label) {
   const roleLabel = role === 'admin' ? 'Admin' : 'Notaio';
   document.getElementById('access-confirm-title').textContent =
     action === 'assign' ? `Assegna ruolo ${roleLabel}` : `Revoca ruolo ${roleLabel}`;
-  document.getElementById('access-confirm-body').textContent =
-    action === 'assign'
-      ? `Vuoi assegnare il ruolo ${roleLabel} a ${label}?`
-      : `Vuoi revocare il ruolo ${roleLabel} a ${label}?`;
+  let bodyText;
+  if (action === 'assign' && role === 'notaio')
+    bodyText = `Vuoi assegnare il ruolo Notaio a ${label}? Verrà assegnato anche il ruolo Admin automaticamente.`;
+  else if (action === 'revoke' && role === 'admin')
+    bodyText = `Vuoi revocare il ruolo Admin a ${label}? Verrà rimosso anche il ruolo Notaio se presente.`;
+  else if (action === 'assign')
+    bodyText = `Vuoi assegnare il ruolo ${roleLabel} a ${label}?`;
+  else
+    bodyText = `Vuoi revocare il ruolo ${roleLabel} a ${label}?`;
+  document.getElementById('access-confirm-body').textContent = bodyText;
   const btn = document.getElementById('access-confirm-btn');
   btn.textContent = action === 'assign' ? 'Sì, assegna' : 'Sì, revoca';
   btn.style.background = action === 'revoke'
@@ -741,21 +768,32 @@ async function executeRoleAction() {
   closeOverlay('overlay-access-confirm');
   const { uid, role, action } = pendingAction;
   pendingAction = null;
-  const collName = role === 'admin' ? 'admins' : 'notai';
   try {
     if (action === 'assign') {
-      await setDoc(doc(db, collName, uid), { assignedAt: serverTimestamp() });
+      await setDoc(doc(db, 'notai' === role ? 'notai' : 'admins', uid), { assignedAt: serverTimestamp() });
+      // Notaio implica sempre anche Admin
+      if (role === 'notaio') {
+        await setDoc(doc(db, 'admins', uid), { assignedAt: serverTimestamp() });
+      }
     } else {
-      await deleteDoc(doc(db, collName, uid));
+      await deleteDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid));
+      // Revocare Admin rimuove anche Notaio automaticamente
+      if (role === 'admin') {
+        await deleteDoc(doc(db, 'notai', uid)).catch(() => {});
+      }
     }
     // Aggiorna cache locale
     const p = allProfiles.find(x => x.uid === uid);
     if (p) {
-      if (role === 'admin')  p.isAdmin  = action === 'assign';
-      if (role === 'notaio') p.isNotaio = action === 'assign';
+      if (role === 'notaio') {
+        p.isNotaio = action === 'assign';
+        if (action === 'assign') p.isAdmin = true;
+      } else {
+        p.isAdmin = action === 'assign';
+        if (action === 'revoke') p.isNotaio = false;
+      }
     }
-    showToast(action === 'assign' ? `✓ Ruolo assegnato` : `✓ Ruolo revocato`);
-    // Rifresca i risultati
+    showToast(action === 'assign' ? '✓ Ruolo assegnato' : '✓ Ruolo revocato');
     searchUsers(document.getElementById('access-search').value);
   } catch(e) {
     showToast('Errore: ' + e.message);
@@ -804,8 +842,11 @@ window.openSingersEditor = (s) => {
 window.saveSingersOverlay     = () => saveSingers(window._editingSerata);
 window.signOutAdmin           = adminSignOut;
 window.searchUsers            = searchUsers;
+window.refreshProfiles        = refreshProfiles;
+window.refreshProfiles         = refreshProfiles;
 window.confirmRoleAction      = confirmRoleAction;
 window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
+window.refreshProfiles        = refreshProfiles;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
