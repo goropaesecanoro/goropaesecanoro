@@ -543,9 +543,12 @@ function updateProgress() {
       const slotSection  = document.querySelector('.slots-section');
       const stickyHeader = document.querySelector('.voting-header');
       if (!slotSection) return;
-      const offset = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
-      const top    = slotSection.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: 'smooth' });
+      // Calcola posizione assoluta tramite offsetTop (indipendente dalla scroll position corrente)
+      let absTop = 0;
+      let el = slotSection;
+      while (el) { absTop += el.offsetTop; el = el.offsetParent; }
+      const offset = stickyHeader ? stickyHeader.offsetHeight : 0;
+      window.scrollTo({ top: absTop - offset, behavior: 'smooth' });
     }, 150);
   }
 }
