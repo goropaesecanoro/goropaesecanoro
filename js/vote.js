@@ -36,14 +36,14 @@ export async function initVoteApp() {
       appConfig     = snap.data();
       currentSerata = appConfig.serata || 1;
       updateSerataUI();
-      if (currentUser) evaluateState(currentUser);
+      if (currentUser) evaluateState(currentUser).catch(e => console.error('evaluateState error:', e));
     }
   });
 
   onAuthStateChanged(auth, async user => {
     currentUser = user;
     if (!user) { showScreen('screen-hero'); return; }
-    await evaluateState(user);
+    await evaluateState(user).catch(e => console.error('evaluateState error:', e));
   });
 }
 
@@ -70,6 +70,7 @@ function updateAlreadyMessage() {
 }
 
 async function evaluateState(user) {
+  if (!user?.uid) return;
   if (await isAdmin(user.uid)) {
     window.location.href = 'admin.html';
     return;
@@ -117,35 +118,51 @@ async function showClosedScreen() {
 
   // ── SERATE 1 e 2: solo preferenze pubblico ──
   const el = document.getElementById('closed-dynamic');
-  if (appConfig.mostraTop5) {
-    const snap     = await getDocs(collection(db, `votes_s${currentSerata}`));
-    const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
-    const scores = {};
-    singers.forEach(s => scores[s.name] = 0);
-    allVotes.forEach(({vote}) =>
-      vote?.forEach((name,i) => { if (scores[name] !== undefined) scores[name] += POINTS[i]; })
-    );
-    const top5 = Object.entries(scores)
-      .sort((a,b) => b[1]-a[1]).slice(0,5)
-      .map(([name]) => name)
-      .sort(() => Math.random() - 0.5);
+  if (!el) { showScreen('screen-closed'); return; }
 
-    document.getElementById('closed-random-note').style.display = 'block';
-    el.innerHTML = `
-      <div class="top5-section">
-        <div class="top5-label">I più apprezzati stasera</div>
-        ${top5.map(name => {
-          const song = singers.find(s=>s.name===name)?.song || '';
-          return `
-          <div class="top5-card">
-            <div class="top5-dot"></div>
-            <div class="s-info">
-              <div class="s-name">${name}</div>
-              ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
+  if (appConfig.mostraTop5) {
+    try {
+      const snap     = await getDocs(collection(db, `votes_s${currentSerata}`));
+      const allVotes = [];
+      snap.forEach(d => allVotes.push(d.data()));
+
+      // Costruisci scores usando i cantanti caricati, con fallback a nomi dai voti
+      const scores = {};
+      singers.forEach(s => { scores[typeof s === 'string' ? s : s.name] = 0; });
+      allVotes.forEach(({vote}) =>
+        vote?.forEach((name, i) => {
+          if (scores[name] === undefined) scores[name] = 0;
+          scores[name] += POINTS[i] || 0;
+        })
+      );
+
+      const top5 = Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name]) => name)
+        .sort(() => Math.random() - 0.5);
+
+      document.getElementById('closed-random-note').style.display = 'block';
+      el.innerHTML = `
+        <div class="top5-section">
+          <div class="top5-label">I più apprezzati stasera</div>
+          ${top5.map(name => {
+            const s = singers.find(s => (typeof s === 'string' ? s : s.name) === name);
+            const song = s?.song || '';
+            return `
+            <div class="top5-card">
+              <div class="top5-dot"></div>
+              <div class="s-info">
+                <div class="s-name">${name}</div>
+                ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    } catch(e) {
+      console.error('showClosedScreen top5 error:', e);
+      el.innerHTML = '';
+    }
   } else {
     el.innerHTML = '';
   }
