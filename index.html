@@ -107,25 +107,22 @@
 
 <!-- ══ CLASSIFICA SVELATA ════════════════════════ -->
 <div class="screen flex-screen" id="screen-reveal"
-     style="min-height:100svh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;position:relative;overflow:hidden;">
+     style="min-height:100svh;flex-direction:column;align-items:center;padding:40px 24px 60px;position:relative;overflow-x:hidden;overflow-y:auto;">
   <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(201,168,76,.15) 0%,transparent 70%)"></div>
-  <div style="font-size:64px;margin-bottom:16px;animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both">🏆</div>
-  <h2 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;animation:fadeDown .5s .1s ease both">
+  <div style="font-size:64px;margin-bottom:12px;animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both;text-align:center">🏆</div>
+  <h2 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;animation:fadeDown .5s .1s ease both;text-align:center;margin-bottom:24px">
     Classifica <span style="color:var(--gold)">Finale</span>
   </h2>
-  <p style="font-size:13px;margin-top:8px;margin-bottom:20px;animation:fadeDown .5s .15s ease both;max-width:300px;text-align:center;line-height:1.6;color:var(--muted)">
-    Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
-    <span style="font-size:11px;opacity:.7">Non include le votazioni della giuria tecnica</span>
-  </p>
-  <div id="reveal-festival-section" style="display:none;width:100%;max-width:420px;margin-bottom:28px;animation:fadeUp .5s .25s ease both"></div>
-  <div class="summary-table" id="reveal-ranking" style="animation:fadeUp .5s .3s ease both"></div>
+  <!-- Tutto il contenuto è iniettato da buildRevealScreen() in vote.js -->
+  <div id="reveal-festival-section" style="display:none;width:100%;max-width:420px"></div>
+  <div id="reveal-public-section"   style="display:none;width:100%;max-width:420px"></div>
 </div>
 
 <!-- ══ GIÀ VOTATO ════════════════════════════════ -->
 <div class="screen flex-screen already-screen" id="screen-already">
   <div style="font-size:64px;margin-bottom:20px">🎵</div>
   <h2>Voto <span>registrato!</span></h2>
-  <p>Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.</p>
+  <p id="already-message">Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.</p>
   <div class="summary-table" id="already-summary"></div>
 </div>
 
