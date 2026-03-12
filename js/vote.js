@@ -47,6 +47,28 @@ export async function initVoteApp() {
   });
 }
 
+// ══════════════════════════════════════════════
+//  MESSAGGIO "GIÀ VOTATO"
+// ══════════════════════════════════════════════
+function updateAlreadyMessage() {
+  const el = document.getElementById('already-message');
+  if (!el) return;
+  if (currentSerata !== 3) {
+    el.textContent = 'Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.';
+    return;
+  }
+  const hasFest = !!appConfig.mostraTop5Finale;
+  const hasPub  = !!appConfig.svelaClassifica;
+  if (hasFest && hasPub)
+    el.textContent = 'Grazie per aver partecipato! A breve saranno disponibili i vincitori ufficiali del festival e la classifica completa del pubblico.';
+  else if (hasFest)
+    el.textContent = 'Grazie per aver partecipato! A breve saranno svelati i vincitori ufficiali del festival.';
+  else if (hasPub)
+    el.textContent = 'Grazie per aver partecipato! A breve sarà disponibile la classifica completa delle votazioni del pubblico.';
+  else
+    el.textContent = 'Grazie per aver partecipato! Al termine della serata sarà disponibile la classifica del festival.';
+}
+
 async function evaluateState(user) {
   if (await isAdmin(user.uid)) {
     window.location.href = 'admin.html';
@@ -63,13 +85,7 @@ async function evaluateState(user) {
   const voteSnap = await getDoc(doc(db, `votes_s${currentSerata}`, user.uid));
   if (voteSnap.exists()) {
     renderSummaryTable('already-summary', voteSnap.data().vote);
-    // Messaggio personalizzato per serata finale
-    const alreadyMsg = document.getElementById('already-message');
-    if (alreadyMsg) {
-      alreadyMsg.textContent = currentSerata === 3
-        ? 'Grazie per aver partecipato! Al termine della serata sarà disponibile la classifica reale del festival.'
-        : 'Grazie per aver partecipato! Quando le votazioni chiuderanno potrai vedere i preferiti del pubblico su questa pagina.';
-    }
+    updateAlreadyMessage();
     showScreen('screen-already');
   } else {
     setupVotingScreen(user);
@@ -86,55 +102,15 @@ async function showClosedScreen() {
   const dynEl = document.getElementById('closed-dynamic');
   if (dynEl) dynEl.innerHTML = '';
 
-  if (appConfig.svelaClassifica && currentSerata === 3) {
-    await buildRevealScreen();
-    showScreen('screen-reveal');
-    return;
-  }
-
-  const el = document.getElementById('closed-dynamic');
-  let html = '';
-
-  // ── SERATA 3: classifica festival prima, poi preferenze pubblico ──
+  // ── SERATA 3: qualsiasi contenuto da mostrare va su screen-reveal ──
   if (currentSerata === 3) {
-
-    if (appConfig.mostraTop5Finale) {
-      const festHtml = await renderTop5Finale();
-      if (festHtml) html += festHtml;
+    const showReveal = appConfig.svelaClassifica || appConfig.mostraTop5Finale;
+    if (showReveal) {
+      await buildRevealScreen();
+      showScreen('screen-reveal');
+      return;
     }
-
-    if (appConfig.mostraTop5) {
-      const snap = await getDocs(collection(db, `votes_s${currentSerata}`));
-      const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
-      const scores = {};
-      singers.forEach(s => scores[s.name] = 0);
-      allVotes.forEach(({vote}) =>
-        vote?.forEach((name,i) => { if (scores[name] !== undefined) scores[name] += POINTS[i]; })
-      );
-      const top5 = Object.entries(scores)
-        .sort((a,b) => b[1]-a[1]).slice(0,5)
-        .map(([name]) => name)
-        .sort(() => Math.random() - 0.5);
-
-      document.getElementById('closed-random-note').style.display = 'block';
-      html += `
-        <div class="top5-section"${html ? ' style="margin-top:28px"' : ''}>
-          <div class="top5-label">I più apprezzati stasera</div>
-          ${top5.map(name => {
-            const song = singers.find(s=>s.name===name)?.song || '';
-            return `
-            <div class="top5-card">
-              <div class="top5-dot"></div>
-              <div class="s-info">
-                <div class="s-name">${name}</div>
-                ${song ? `<div class="s-song">♪ ${song}</div>` : ''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>`;
-    }
-
-    el.innerHTML = html;
+    // Nessun contenuto da mostrare: schermata chiusa semplice
     showScreen('screen-closed');
     return;
   }
@@ -237,19 +213,23 @@ async function buildRevealScreen() {
     }
   }
 
-  // ── Sezione 2: classifica pubblica completa — sempre presente con svelaClassifica ──
+  // ── Sezione 2: classifica pubblica — solo se svelaClassifica è attivo ──
   if (pubDiv) {
-    const pubHtml = await buildPublicRankingHtml();
-    pubDiv.innerHTML = `
-      <div style="text-align:center;margin-bottom:16px${hasFest ? ';margin-top:36px' : ''}">
-        <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎤 Voto del Pubblico</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5">
-          Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
-          <span style="font-size:11px;opacity:.7">Non include le votazioni della giuria tecnica</span>
+    if (appConfig.svelaClassifica) {
+      const pubHtml = await buildPublicRankingHtml();
+      pubDiv.innerHTML = `
+        <div style="text-align:center;margin-bottom:16px${hasFest ? ';margin-top:36px' : ''}">
+          <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🎤 Voto del Pubblico</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5">
+            Classifica delle <strong style="color:var(--gold)">votazioni del pubblico</strong><br>
+            <span style="font-size:11px;opacity:.7">Non include le votazioni della giuria tecnica</span>
+          </div>
         </div>
-      </div>
-      <div class="summary-table">${pubHtml}</div>`;
-    pubDiv.style.display = '';
+        <div class="summary-table">${pubHtml}</div>`;
+      pubDiv.style.display = '';
+    } else {
+      pubDiv.style.display = 'none';
+    }
   }
 }
 
