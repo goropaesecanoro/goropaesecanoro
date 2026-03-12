@@ -116,6 +116,7 @@ async function showClosedScreen() {
   }
 
   // ── SERATE 1 e 2: solo preferenze pubblico ──
+  const el = document.getElementById('closed-dynamic');
   if (appConfig.mostraTop5) {
     const snap     = await getDocs(collection(db, `votes_s${currentSerata}`));
     const allVotes = []; snap.forEach(d => allVotes.push(d.data()));
