@@ -131,6 +131,20 @@
     </div>
   </div>
 
+
+  <!-- ── 3b. Classifica Tecnica Notaio (compare quando calcolata) ── -->
+  <div class="admin-section" id="section-jury-ranking" style="display:none">
+    <div class="admin-section-title">Classifica giuria tecnica</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-secondary" onclick="adminShowJuryRanking()" id="btn-admin-jury-full">
+        📊 Mostra classifica tecnica + bonus pubblico
+      </button>
+      <button class="btn-secondary" onclick="adminShowTop3()" id="btn-admin-top3">
+        🎤 Mostra top 3 per i conduttori
+      </button>
+    </div>
+  </div>
+
   <!-- ── 4. Classifica finale Z-score (solo serata 3) ── -->
   <div class="admin-section" id="btn-zscore-wrap" style="display:none">
     <div class="admin-section-title">Classifica finale normalizzata</div>
@@ -239,6 +253,26 @@
 </div>
 
 <!-- ══ OVERLAY — CLASSIFICA FINALE Z-SCORE ════════ -->
+
+<!-- ══ OVERLAY — CLASSIFICA TECNICA ADMIN ════════════════════════════ -->
+<div class="overlay" id="overlay-admin-jury" style="display:none">
+  <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:440px">
+    <h3 style="color:var(--gold)" id="overlay-admin-jury-title">📊 Classifica tecnica</h3>
+    <div id="overlay-admin-jury-rows" style="margin-bottom:16px"></div>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-admin-jury')">Chiudi</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY — TOP 3 CONDUTTORI ════════════════════════════ -->
+<div class="overlay" id="overlay-admin-top3" style="display:none">
+  <div class="overlay-box" style="max-width:380px;text-align:center">
+    <h3 style="color:var(--gold);margin-bottom:4px" id="overlay-top3-title">🎤 Top 3</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px" id="overlay-top3-subtitle"></p>
+    <div id="overlay-top3-rows" style="margin-bottom:20px"></div>
+    <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-admin-top3')">Chiudi</button>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-final" style="display:none">
   <div class="overlay-box" style="max-height:90vh;overflow-y:auto;max-width:420px">
     <h3 style="color:var(--gold)">🏆 Classifica finale</h3>
