@@ -537,10 +537,11 @@ function updateProgress() {
   const btn = document.getElementById('btn-submit');
   btn.disabled = filled < 5 || selections.includes(null);
 
-  // Scroll automatico al pulsante invio quando tutti e 5 sono selezionati
+  // Scroll automatico a "La tua classifica" quando tutti e 5 sono selezionati
   if (filled === 5) {
     setTimeout(() => {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const slotSection = document.querySelector('.slots-section');
+      if (slotSection) slotSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 150);
   }
 }
