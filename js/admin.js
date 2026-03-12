@@ -106,35 +106,23 @@ async function saveSingers(serata) {
     song: row.querySelector('.singer-edit-song').value.trim()
   })).filter(r => r.name);
   if (list.length === 0) { showToast('Inserisci almeno un cantante'); return; }
+
+  // Scrivi la serata modificata
   await setDoc(doc(db,'singers',`s${serata}`), { list, updatedAt: serverTimestamp() });
   singers[serata] = list;
 
-  // Propaga i nuovi nomi/canzoni a singers/s3 se già esiste,
-  // mantenendo l'ordine salvato e aggiornando solo i dati
+  // Riscrivi sempre s3 come concatenazione fresca s1+s2
+  // L'ordine di esibizione sarà gestito da "Ordina Serata Finale"
   if (serata === 1 || serata === 2) {
     try {
-      const otherKey = serata === 1 ? 's2' : 's1';
-      const [s3Snap, otherSnap] = await Promise.all([
-        getDoc(doc(db,'singers','s3')),
-        getDoc(doc(db,'singers', otherKey))
-      ]);
-      if (s3Snap.exists() && s3Snap.data().list?.length > 0) {
-        const norm = l => (l||[]).map(s => typeof s==='string' ? {name:s,song:''} : s);
-        const otherList = otherSnap.exists() ? norm(otherSnap.data().list) : [];
-
-        // Mappa nome→{name,song} con i dati freschi di entrambe le serate
-        const updatedMap = {};
-        [...norm(list), ...otherList].forEach(s => { updatedMap[s.name] = s; });
-
-        // Riapplica sull'ordine esistente di S3
-        const s3Updated = s3Snap.data().list.map(s => {
-          const name = typeof s === 'string' ? s : s.name;
-          const found = updatedMap[name];
-          return found ? {name: found.name, song: found.song||''} : {name, song: s.song||''};
-        });
-        await setDoc(doc(db,'singers','s3'), { list: s3Updated, updatedAt: serverTimestamp() });
-      }
-    } catch(e) { /* S3 non aggiornato — non bloccare il salvataggio principale */ }
+      const otherKey  = serata === 1 ? 's2' : 's1';
+      const otherSnap = await getDoc(doc(db,'singers', otherKey));
+      const norm      = (l, sn) => (l||[]).map(s => typeof s==='string' ? {name:s,song:'',serataNum:sn} : {name:s.name,song:s.song||'',serataNum:sn});
+      const otherList = otherSnap.exists() ? norm(otherSnap.data().list, serata===1 ? 2 : 1) : [];
+      const s1list    = serata === 1 ? norm(list, 1) : otherList;
+      const s2list    = serata === 2 ? norm(list, 2) : otherList;
+      await setDoc(doc(db,'singers','s3'), { list: [...s1list, ...s2list], updatedAt: serverTimestamp() });
+    } catch(e) { showToast('⚠️ s3 non aggiornato: ' + e.message); }
   }
 
   showToast(`Cantanti Serata ${serata} salvati ✓`);
@@ -578,28 +566,16 @@ async function resetVotes() {
 let _finalOrderList = []; // [{name, song, serataNum}]
 
 async function openFinalOrderEditor() {
-  // Carica S3 se esiste, altrimenti S1+S2
-  const [s1Snap, s2Snap, s3Snap] = await Promise.all([
-    getDoc(doc(db,'singers','s1')),
-    getDoc(doc(db,'singers','s2')),
-    getDoc(doc(db,'singers','s3'))
-  ]);
-  const norm = (list, sn) => (list||[])
-    .map(s => typeof s==='string' ? {name:s,song:'',serataNum:sn} : {...s,serataNum:sn});
-  const list1 = s1Snap.exists() ? norm(s1Snap.data().list, 1) : DEFAULT_SINGERS[1].map(s=>({name:String(s),song:'',serataNum:1}));
-  const list2 = s2Snap.exists() ? norm(s2Snap.data().list, 2) : DEFAULT_SINGERS[2].map(s=>({name:String(s),song:'',serataNum:2}));
-
-  if (s3Snap.exists() && s3Snap.data().list?.length > 0) {
-    // S3 salvato — ricostruisci con dati aggiornati da S1/S2
-    const dataMap = {};
-    [...list1,...list2].forEach(s => { dataMap[s.name] = s; });
-    _finalOrderList = s3Snap.data().list.map(s => {
-      const name = typeof s==='string' ? s : s.name;
-      return dataMap[name] || {name, song:'', serataNum:0};
-    });
-  } else {
-    _finalOrderList = [...list1, ...list2];
-  }
+  // S3 è sempre aggiornato da saveSingers — lo leggiamo direttamente
+  // e aggiungiamo serataNum per visualizzazione (S1=primi 7, S2=secondi 7)
+  const s3Snap = await getDoc(doc(db,'singers','s3'));
+  const norm = l => (l||[]).map((s,i) => typeof s==='string'
+    ? {name:s, song:'', serataNum:0}
+    : {name:s.name, song:s.song||'', serataNum:s.serataNum||0});
+  _finalOrderList = s3Snap.exists() ? norm(s3Snap.data().list) : [
+    ...DEFAULT_SINGERS[1].map(s=>({name:String(s),song:'',serataNum:1})),
+    ...DEFAULT_SINGERS[2].map(s=>({name:String(s),song:'',serataNum:2}))
+  ];
 
   renderFinalOrderList();
   openOverlay('overlay-order');
@@ -654,7 +630,7 @@ function renderFinalOrderList() {
 
 async function saveFinalOrder() {
   try {
-    const list = _finalOrderList.map(({name, song}) => ({name, song}));
+    const list = _finalOrderList.map(({name, song, serataNum}) => ({name, song, serataNum: serataNum||0}));
     await setDoc(doc(db,'singers','s3'), { list, updatedAt: serverTimestamp() });
     showToast('✓ Ordine finale salvato');
     closeOverlay('overlay-order');
