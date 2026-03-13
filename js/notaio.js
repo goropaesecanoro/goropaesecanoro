@@ -71,9 +71,7 @@ async function releaseJudgeLock(serata, judgeName) {
   if (!judgeName) return;
   const key = `jury_s${serata}_${judgeName.replace(/\s+/g,'_')}`;
   try {
-    const ref  = doc(db, 'editing_locks', key);
-    const snap = await getDoc(ref);
-    if (snap.exists() && snap.data().uid === currentUser?.uid) await deleteDoc(ref);
+    await deleteDoc(doc(db, 'editing_locks', key));
   } catch(e) {}
 }
 

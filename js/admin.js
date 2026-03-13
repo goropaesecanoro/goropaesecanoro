@@ -965,9 +965,7 @@ async function acquireLock(key) {
 
 async function releaseLock(key) {
   try {
-    const ref  = doc(db, 'editing_locks', key);
-    const snap = await getDoc(ref);
-    if (snap.exists() && snap.data().uid === auth.currentUser?.uid) await deleteDoc(ref);
+    await deleteDoc(doc(db, 'editing_locks', key));
   } catch(e) {}
 }
 
