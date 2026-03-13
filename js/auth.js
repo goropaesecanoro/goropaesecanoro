@@ -193,3 +193,10 @@ window.verifyOTP         = verifyOTP;
 window.backToPhoneStep1  = () => { hideRecaptchaBadge(); backToPhoneStep1(); };
 window.signOutUser       = signOutUser;
 window.showHaveCode      = showHaveCode;
+
+// Aggancia il pulsante "Ho già un codice" via addEventListener
+// (più affidabile di onclick="" con ES modules)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-have-code')
+    ?.addEventListener('click', showHaveCode);
+});
