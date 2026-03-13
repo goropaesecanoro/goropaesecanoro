@@ -457,9 +457,7 @@ async function clearJudgeVotes() {
       deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{}),
       deleteDoc(doc(db,'jury_ranking','festival')).catch(()=>{}),
     ]);
-    // Ri-renderizza griglia vuota e lista
-    renderVotesGrid(judgeName);
-    renderJudgesPreview();
+    await releaseJudgeLock(currentSerata, judgeName);
     showToast(`✓ Voti di ${judgeName} eliminati — ricaricamento in corso…`);
     setTimeout(() => window.location.reload(), 2000);
   } catch(e) {
@@ -493,6 +491,7 @@ async function saveJudgeVotes() {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
+    await releaseJudgeLock(currentSerata, judgeName);
     renderJudgesCompletion();
     showToast(`✓ Voti di ${judgeName} salvati — ricaricamento in corso…`);
     setTimeout(() => window.location.reload(), 2000);
