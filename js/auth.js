@@ -30,15 +30,13 @@ export function showPhoneAuth() {
   document.getElementById('phone-step-1').style.display = '';
   document.getElementById('phone-step-2').style.display = 'none';
   document.body.classList.add('show-recaptcha');
-  // Se l'utente era in attesa di un codice, mostra il pulsante "Ho già un codice"
-  const pending = sessionStorage.getItem('phoneAuthPending');
+  // Aggiorna il testo del pulsante se c'è un codice pendente
   const savedNum = sessionStorage.getItem('phoneAuthNumber');
-  const btnHave = document.getElementById('btn-have-code');
-  if (pending && savedNum && btnHave) {
-    btnHave.style.display = '';
-    btnHave.textContent = `Ho già il codice per ${savedNum} →`;
-  } else if (btnHave) {
-    btnHave.style.display = 'none';
+  const btnHave  = document.getElementById('btn-have-code');
+  if (btnHave) {
+    btnHave.textContent = savedNum
+      ? `Ho già il codice per ${savedNum}`
+      : 'Ho già un codice';
   }
   initRecaptcha();
 }
@@ -149,13 +147,21 @@ export function backToPhoneStep1() {
 }
 
 export function showHaveCode() {
-  const savedNum = sessionStorage.getItem('phoneAuthNumber');
-  if (!savedNum) { showToast('Inserisci prima il numero e richiedi un codice'); return; }
+  // Prova prima il numero nel campo, poi il sessionStorage
+  const prefix    = document.getElementById('phone-prefix')?.value.trim() || '+39';
+  const numInput  = document.getElementById('phone-number')?.value.trim().replace(/\s/g,'') || '';
+  const savedNum  = sessionStorage.getItem('phoneAuthNumber');
+  const fullNumber = numInput.length >= 8 ? prefix + numInput : savedNum;
+  if (!fullNumber) {
+    showToast('Inserisci prima il numero di telefono');
+    document.getElementById('phone-number')?.focus();
+    return;
+  }
   // Mostra direttamente lo step inserimento codice
   document.getElementById('phone-step-1').style.display = 'none';
   document.getElementById('phone-step-2').style.display = '';
   document.getElementById('otp-sent-to').textContent =
-    `Inserisci il codice ricevuto per ${savedNum}.`;
+    `Inserisci il codice ricevuto per ${fullNumber}.`;
   setupOTPInputs();
   document.getElementById('otp-0').focus();
 }
