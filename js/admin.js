@@ -1098,20 +1098,20 @@ async function adminShowJuryRanking() {
     const ranked = assignOlympicRanksAdmin(ranking);
     const card = document.createElement('div');
     card.className = 'ranking-card';
-    card.innerHTML = `<div class="ranking-head"><span>#</span><span>Cantante</span><span></span></div>`;
+    card.innerHTML = `<div class="ranking-head" style="grid-template-columns:40px 1fr"><span>#</span><span>Cantante</span></div>`;
     ranked.forEach(r => {
       const row = document.createElement('div');
       row.className = 'ranking-row' + (r.exAequo ? ' ex-aequo' : '');
       const name = r.name || r.singer || '';
       const song = r.song || '';
+      row.style.gridTemplateColumns = '40px 1fr';
       row.innerHTML = `
         <span class="r-pos">${r.rankLabel}</span>
         <div style="min-width:0">
           <div class="r-name">${name}</div>
           ${song ? `<div class="r-song">♪ ${song}</div>` : ''}
           ${r.exAequo ? `<div class="ex-aequo-badge">ex-aequo</div>` : ''}
-        </div>
-        <span></span>`;
+        </div>`;
       card.appendChild(row);
     });
     rows.appendChild(card);
