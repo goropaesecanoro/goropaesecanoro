@@ -30,7 +30,16 @@ export function showPhoneAuth() {
   document.getElementById('phone-step-1').style.display = '';
   document.getElementById('phone-step-2').style.display = 'none';
   document.body.classList.add('show-recaptcha');
-  // Inizializza il verifier solo ora, quando il container è visibile nel DOM
+  // Se l'utente era in attesa di un codice, mostra il pulsante "Ho già un codice"
+  const pending = sessionStorage.getItem('phoneAuthPending');
+  const savedNum = sessionStorage.getItem('phoneAuthNumber');
+  const btnHave = document.getElementById('btn-have-code');
+  if (pending && savedNum && btnHave) {
+    btnHave.style.display = '';
+    btnHave.textContent = `Ho già il codice per ${savedNum} →`;
+  } else if (btnHave) {
+    btnHave.style.display = 'none';
+  }
   initRecaptcha();
 }
 
@@ -69,6 +78,9 @@ export async function sendSMS() {
     await window._rcv.render().catch(() => {});
     confirmResult = await signInWithPhoneNumber(auth, fullNumber, window._rcv);
     document.getElementById('otp-sent-to').textContent = `Codice inviato al ${fullNumber}.`;
+    // Salva il numero in sessionStorage così sopravvive a uscita/ritorno
+    sessionStorage.setItem('phoneAuthNumber', fullNumber);
+    sessionStorage.setItem('phoneAuthPending', '1');
     document.getElementById('phone-step-1').style.display = 'none';
     document.getElementById('phone-step-2').style.display = '';
     setupOTPInputs();
@@ -118,6 +130,8 @@ export async function verifyOTP() {
   try {
     const cred = PhoneAuthProvider.credential(confirmResult.verificationId, code);
     await signInWithCredential(auth, cred);
+    sessionStorage.removeItem('phoneAuthPending');
+    sessionStorage.removeItem('phoneAuthNumber');
   } catch(e) {
     showToast('Codice non corretto. Riprova.');
     btn.disabled = false; btn.textContent = 'Verifica e accedi';
@@ -130,7 +144,20 @@ export function backToPhoneStep1() {
   document.getElementById('phone-step-1').style.display = '';
   document.getElementById('phone-step-2').style.display = 'none';
   const btn = document.getElementById('btn-send-sms');
-  btn.disabled = false; btn.textContent = 'Invia SMS';
+  btn.disabled = false; btn.textContent = 'Invia SMS con codice';
+  // Non cancellare sessionStorage qui — l'utente potrebbe voler riusare il codice
+}
+
+export function showHaveCode() {
+  const savedNum = sessionStorage.getItem('phoneAuthNumber');
+  if (!savedNum) { showToast('Inserisci prima il numero e richiedi un codice'); return; }
+  // Mostra direttamente lo step inserimento codice
+  document.getElementById('phone-step-1').style.display = 'none';
+  document.getElementById('phone-step-2').style.display = '';
+  document.getElementById('otp-sent-to').textContent =
+    `Inserisci il codice ricevuto per ${savedNum}.`;
+  setupOTPInputs();
+  document.getElementById('otp-0').focus();
 }
 
 function hideRecaptchaBadge() {
