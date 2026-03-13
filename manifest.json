@@ -1,0 +1,16 @@
+{
+  "name": "Goro Paese Canoro 2026",
+  "short_name": "Vota Goro",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0D0D18",
+  "theme_color": "#0D0D18",
+  "icons": [
+    {
+      "src": "img/locandina.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
