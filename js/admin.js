@@ -275,6 +275,10 @@ async function confirmSerataChange() {
   updateSwitches();
   refreshRanking();
   showToast(`✓ ${SERATA_LABELS[currentSerata]} attivata`);
+  // Nascondi subito la sezione jury fino a verifica nuova serata
+  const sec = document.getElementById('section-jury-ranking');
+  if (sec) sec.style.display = 'none';
+  _juryRankingFirstLoad = true;
   if (window._juryListenerUpdate) window._juryListenerUpdate();
 }
 
@@ -621,47 +625,43 @@ async function openFinalOrderEditor() {
   openOverlay('overlay-order');
 }
 
+let _selectedOrderIdx = null;
+
 function renderFinalOrderList() {
   const container = document.getElementById('order-list');
   container.innerHTML = '';
   _finalOrderList.forEach((s, i) => {
     const row = document.createElement('div');
     row.className = 'order-row';
-    row.draggable = true;
     row.dataset.idx = i;
+    const isSelected = _selectedOrderIdx === i;
+    if (isSelected) row.classList.add('order-selected');
     row.innerHTML = `
-      <div class="order-drag-handle">⠿</div>
-      <div class="order-info">
-        <div class="order-num">${i+1}</div>
-        <div class="s-info">
-          <div class="s-name">${s.name}</div>
-          ${s.song ? `<div class="s-song">♪ ${s.song}</div>` : ''}
-        </div>
+      <div class="order-num">${i+1}</div>
+      <div class="s-info" style="flex:1;min-width:0">
+        <div class="s-name">${s.name}</div>
+        ${s.song ? `<div class="s-song">♪ ${s.song}</div>` : ''}
       </div>
       <div class="order-serata">S${s.serataNum||'?'}</div>`;
 
-    // Drag & drop handlers
-    row.addEventListener('dragstart', e => {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', i);
-      row.classList.add('dragging');
-    });
-    row.addEventListener('dragend', () => row.classList.remove('dragging'));
-    row.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      row.classList.add('drag-over');
-    });
-    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-    row.addEventListener('drop', e => {
-      e.preventDefault();
-      row.classList.remove('drag-over');
-      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-      const toIdx   = parseInt(row.dataset.idx);
-      if (fromIdx === toIdx) return;
-      const moved = _finalOrderList.splice(fromIdx, 1)[0];
-      _finalOrderList.splice(toIdx, 0, moved);
-      renderFinalOrderList();
+    row.addEventListener('click', () => {
+      if (_selectedOrderIdx === null) {
+        // Prima selezione
+        _selectedOrderIdx = i;
+        renderFinalOrderList();
+      } else if (_selectedOrderIdx === i) {
+        // Deseleziona
+        _selectedOrderIdx = null;
+        renderFinalOrderList();
+      } else {
+        // Sposta: inserisci il selezionato nella posizione toccata
+        const fromIdx = _selectedOrderIdx;
+        const toIdx   = i;
+        const moved   = _finalOrderList.splice(fromIdx, 1)[0];
+        _finalOrderList.splice(toIdx, 0, moved);
+        _selectedOrderIdx = null;
+        renderFinalOrderList();
+      }
     });
 
     container.appendChild(row);
@@ -1026,23 +1026,19 @@ async function adminShowJuryRanking() {
     rows.innerHTML = '';
     const card = document.createElement('div');
     card.className = 'ranking-card';
-    card.innerHTML = `<div class="ranking-head" style="grid-template-columns:36px 1fr 70px 70px">
-      <span>#</span><span>Cantante</span>
-      <span style="text-align:right;font-size:11px">Giuria</span>
-      <span style="text-align:right;font-size:11px">Totale</span>
-    </div>`;
+    card.innerHTML = `<div class="ranking-head"><span>#</span><span>Cantante</span><span></span></div>`;
     ranking.forEach((r, i) => {
       const row = document.createElement('div');
       row.className = 'ranking-row';
-      const juryScore = typeof r.juryScore === 'number' ? r.juryScore.toFixed(4) : '–';
-      const total     = typeof r.totalScore === 'number' ? r.totalScore.toFixed(4)
-                      : typeof r.score === 'number' ? r.score.toFixed(4) : '–';
-      row.style.cssText = 'grid-template-columns:36px 1fr 70px 70px';
+      const name = r.name || r.singer || '';
+      const song = r.song || '';
       row.innerHTML = `
         <span class="r-pos">${i+1}</span>
-        <div style="min-width:0"><div class="r-name">${r.name||r.singer||''}</div></div>
-        <span class="r-pts" style="font-size:12px">${juryScore}</span>
-        <span class="r-pts" style="font-size:12px;color:var(--gold)">${total}</span>`;
+        <div style="min-width:0">
+          <div class="r-name">${name}</div>
+          ${song ? `<div class="r-song">♪ ${song}</div>` : ''}
+        </div>
+        <span></span>`;
       card.appendChild(row);
     });
     rows.appendChild(card);
@@ -1057,25 +1053,53 @@ async function adminShowTop3() {
   const title    = document.getElementById('overlay-top3-title');
   const subtitle = document.getElementById('overlay-top3-subtitle');
   rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
-  const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
-  if (title) title.textContent = currentSerata === 3 ? '🎤 Top 3 critica' : '🎤 Top 3 — ' + SERATA_LABELS[currentSerata];
-  if (subtitle) subtitle.textContent = currentSerata === 3
-    ? 'I tre migliori per la giuria tecnica — classifica definitiva festival'
-    : 'I tre più votati dalla giuria tecnica di questa serata';
+
+  const isFinale = currentSerata === 3;
+  if (title) title.textContent = isFinale ? '🎤 Top 3 critica' : '🎤 Top 3 — ' + SERATA_LABELS[currentSerata];
+  if (subtitle) subtitle.textContent = isFinale
+    ? 'I tre migliori della giuria critica — in ordine di classifica'
+    : 'I tre nomi in ordine casuale per la rivelazione sul palco';
+
   try {
-    const snap = await getDoc(doc(db,'jury_ranking', key));
-    if (!snap.exists() || !snap.data().ranking?.length) {
-      rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata.</div>';
-      return;
+    let top3names;
+
+    if (isFinale) {
+      // Serata 3: usa criticRanking da jury_ranking/festival, in ordine corretto
+      const snap = await getDoc(doc(db,'jury_ranking','festival'));
+      if (!snap.exists()) {
+        rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica festival non ancora calcolata.</div>';
+        return;
+      }
+      const data = snap.data();
+      const source = data.criticRanking?.length ? data.criticRanking : data.ranking;
+      if (!source?.length) {
+        rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica critica non disponibile.</div>';
+        return;
+      }
+      top3names = source.slice(0,3).map(r => r.name || r.singer || '');
+      // Ordine corretto con medaglie
+      const medals = ['🥇','🥈','🥉'];
+      rows.innerHTML = top3names.map((name, i) => `
+        <div style="margin-bottom:16px">
+          <div style="font-size:36px;margin-bottom:4px">${medals[i]}</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text)">${name}</div>
+        </div>`).join('');
+    } else {
+      // Serate 1/2: shuffle come in notaio — i nomi appaiono in ordine casuale senza medaglie
+      const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+      if (!snap.exists() || !snap.data().ranking?.length) {
+        rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata.</div>';
+        return;
+      }
+      const shuffled = snap.data().ranking.slice(0,3)
+        .map(r => r.name || r.singer || '')
+        .sort(() => Math.random() - 0.5);
+      const colors = ['#FFD700','#C0C0C0','#CD7F32'];
+      rows.innerHTML = shuffled.map((name, i) => `
+        <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid ${colors[i]}33;margin-bottom:12px">
+          <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:${colors[i]}">${name}</div>
+        </div>`).join('');
     }
-    const top3 = snap.data().ranking.slice(0,3);
-    const medals = ['🥇','🥈','🥉'];
-    rows.innerHTML = top3.map((r,i) => `
-      <div style="margin-bottom:16px">
-        <div style="font-size:36px;margin-bottom:4px">${medals[i]}</div>
-        <div style="font-size:20px;font-weight:700;color:var(--text)">${r.name||r.singer||''}</div>
-        ${r.song ? `<div style="font-size:13px;color:var(--muted);margin-top:2px">♪ ${r.song}</div>` : ''}
-      </div>`).join('');
   } catch(e) {
     rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Errore: ' + e.message + '</div>';
   }

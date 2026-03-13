@@ -9,11 +9,12 @@ import { isAdmin } from './auth.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   doc, getDoc, setDoc, getDocs,
-  collection, serverTimestamp
+  collection, serverTimestamp, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Stato ─────────────────────────────────────
 let currentUser   = null;
+let _unsubRoleWatcher = null;
 let currentSerata = 1;
 let singers       = []; // [{name, song}]
 let selections    = [null,null,null,null,null];
@@ -96,6 +97,17 @@ async function evaluateState(user) {
   }
   // Salva/aggiorna profilo utente al primo accesso
   saveUserProfile(user).catch(() => {});
+  // Ascolta assegnazione ruolo in tempo reale — se viene assegnato admin o notaio, ricarica
+  if (!_unsubRoleWatcher) {
+    let _roleFirstLoad = true;
+    _unsubRoleWatcher = onSnapshot(doc(db,'admins', user.uid), snap => {
+      if (_roleFirstLoad) { _roleFirstLoad = false; return; }
+      if (snap.exists()) {
+        showToast('✅ Accesso admin abilitato. Reindirizzamento…');
+        setTimeout(() => { window.location.href = 'admin.html'; }, 1800);
+      }
+    }, () => {});
+  }
   await loadSingers();
   updateSerataUI();
 
