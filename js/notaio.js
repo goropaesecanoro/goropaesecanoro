@@ -869,8 +869,8 @@ function attachSwipeClose(box, overlayId) {
     const t = e.changedTouches ? e.changedTouches[0] : e;
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
-    // Swipe sinistro (dx < -60) con movimento prevalentemente orizzontale
-    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
+    // Swipe sinistra→destra come Android back (dx > 60)
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
     startX = null; startY = null;
   };
   // Rimuovi listener precedenti se già attaccati
