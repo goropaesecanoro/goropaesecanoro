@@ -857,15 +857,48 @@ async function openCriticaOverlay() {
 // ══════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════
+// Swipe sinistro o verso il basso sulla overlay-box = chiudi
+function attachSwipeClose(box, overlayId) {
+  let startX = null, startY = null;
+  const onStart = e => {
+    const t = e.touches ? e.touches[0] : e;
+    startX = t.clientX; startY = t.clientY;
+  };
+  const onEnd = e => {
+    if (startX === null) return;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    // Swipe sinistro (dx < -60) con movimento prevalentemente orizzontale
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
+    startX = null; startY = null;
+  };
+  // Rimuovi listener precedenti se già attaccati
+  box._swipeStart && box.removeEventListener('touchstart', box._swipeStart);
+  box._swipeEnd   && box.removeEventListener('touchend',   box._swipeEnd);
+  box._swipeStart = onStart; box._swipeEnd = onEnd;
+  box.addEventListener('touchstart', onStart, { passive: true });
+  box.addEventListener('touchend',   onEnd,   { passive: true });
+}
+
 function openOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.style.display = 'flex';
-  // Scroll sempre in cima alla overlay-box
   const box = el.querySelector('.overlay-box');
   if (box) box.scrollTop = 0;
+  // Tap sul backdrop (fuori dalla box) = chiudi
+  el._backdropHandler = e => { if (e.target === el) closeOverlay(id); };
+  el.addEventListener('click', el._backdropHandler);
+  // Swipe sinistro sulla box = chiudi
+  if (box) attachSwipeClose(box, id);
 }
-function closeOverlay(id) { const el=document.getElementById(id); if(el) el.style.display='none'; }
+function closeOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'none';
+  if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
+}
 
 async function signOutNotaio() {
   await signOut(auth);

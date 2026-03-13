@@ -278,7 +278,6 @@ async function confirmSerataChange() {
   // Nascondi subito la sezione jury fino a verifica nuova serata
   const sec = document.getElementById('section-jury-ranking');
   if (sec) sec.style.display = 'none';
-  _juryRankingFirstLoad = true;
   if (window._juryListenerUpdate) window._juryListenerUpdate();
 }
 
@@ -697,8 +696,48 @@ async function adminSignOut() {
 // ══════════════════════════════════════════════
 //  OVERLAY HELPERS
 // ══════════════════════════════════════════════
-function openOverlay(id)  { const el = document.getElementById(id); if(el) el.style.display='flex'; }
-function closeOverlay(id) { const el = document.getElementById(id); if(el) el.style.display='none'; }
+// Swipe sinistro o verso il basso sulla overlay-box = chiudi
+function attachSwipeClose(box, overlayId) {
+  let startX = null, startY = null;
+  const onStart = e => {
+    const t = e.touches ? e.touches[0] : e;
+    startX = t.clientX; startY = t.clientY;
+  };
+  const onEnd = e => {
+    if (startX === null) return;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    // Swipe sinistro (dx < -60) con movimento prevalentemente orizzontale
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
+    startX = null; startY = null;
+  };
+  // Rimuovi listener precedenti se già attaccati
+  box._swipeStart && box.removeEventListener('touchstart', box._swipeStart);
+  box._swipeEnd   && box.removeEventListener('touchend',   box._swipeEnd);
+  box._swipeStart = onStart; box._swipeEnd = onEnd;
+  box.addEventListener('touchstart', onStart, { passive: true });
+  box.addEventListener('touchend',   onEnd,   { passive: true });
+}
+
+function openOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'flex';
+  const box = el.querySelector('.overlay-box');
+  if (box) box.scrollTop = 0;
+  // Tap sul backdrop (fuori dalla box) = chiudi
+  el._backdropHandler = e => { if (e.target === el) closeOverlay(id); };
+  el.addEventListener('click', el._backdropHandler);
+  // Swipe sinistro sulla box = chiudi
+  if (box) attachSwipeClose(box, id);
+}
+function closeOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = 'none';
+  if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
+}
 
 // ══════════════════════════════════════════════
 //  EXPOSE TO WINDOW
@@ -976,16 +1015,14 @@ function startJuryRankingWatcher() {
   const updateListener = () => {
     if (_unsubJuryRanking) { _unsubJuryRanking(); _unsubJuryRanking = null; }
     const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
+    let _listenerFirstFire = true; // primo scatto = stato attuale, non una novità
+    let _hadRanking = false;       // classifica era già presente al momento dell'attach
     _unsubJuryRanking = onSnapshot(doc(db,'jury_ranking', key), snap => {
       const sec = document.getElementById('section-jury-ranking');
       if (!sec) return;
-      if (snap.exists() && snap.data().ranking?.length) {
+      const hasRanking = snap.exists() && snap.data().ranking?.length > 0;
+      if (hasRanking) {
         sec.style.display = '';
-        // Toast solo se la classifica appare per la prima volta (non al caricamento pagina)
-        if (!_juryRankingFirstLoad) {
-          showToast('📊 Classifiche disponibili — vedi sezione Classifica giuria tecnica', 5000);
-        }
-        _juryRankingFirstLoad = false;
         const btnFull = document.getElementById('btn-admin-jury-full');
         const btnTop3 = document.getElementById('btn-admin-top3');
         if (currentSerata === 3) {
@@ -995,10 +1032,17 @@ function startJuryRankingWatcher() {
           if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
           if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
         }
+        // Toast solo se la classifica è APPENA comparsa (non c'era al caricamento)
+        if (!_listenerFirstFire && !_hadRanking) {
+          showToast('📊 Classifiche disponibili!
+Vedi sezione Classifica giuria tecnica', 180000);
+        }
+        _hadRanking = true;
       } else {
         sec.style.display = 'none';
-        _juryRankingFirstLoad = true;
+        _hadRanking = false;
       }
+      _listenerFirstFire = false;
     }, () => {});
   };
 
@@ -1006,7 +1050,27 @@ function startJuryRankingWatcher() {
   // Quando cambia serata, rinnova il listener
   window._juryListenerUpdate = updateListener;
 }
-let _juryRankingFirstLoad = true;
+
+// ── Ranking olimpico per admin (ex-aequo con posizione condivisa) ──
+function assignOlympicRanksAdmin(sorted) {
+  const medals = ['🥇','🥈','🥉'];
+  let pos = 1;
+  const result = [];
+  for (let i = 0; i < sorted.length; ) {
+    const score = sorted[i].total ?? sorted[i].score ?? sorted[i].totalScore ?? 0;
+    let j = i;
+    while (j < sorted.length && (sorted[j].total ?? sorted[j].score ?? sorted[j].totalScore ?? 0) === score) j++;
+    const count     = j - i;
+    const isExAequo = count > 1;
+    const label     = medals[pos-1] || `${pos}°`;
+    for (let k = i; k < j; k++) {
+      result.push({ ...sorted[k], rankLabel: isExAequo ? `${pos}°` : label, exAequo: isExAequo, rankNum: pos });
+    }
+    pos += count;
+    i = j;
+  }
+  return result;
+}
 
 async function adminShowJuryRanking() {
   openOverlay('overlay-admin-jury');
@@ -1024,19 +1088,21 @@ async function adminShowJuryRanking() {
     }
     const ranking = snap.data().ranking;
     rows.innerHTML = '';
+    const ranked = assignOlympicRanksAdmin(ranking);
     const card = document.createElement('div');
     card.className = 'ranking-card';
     card.innerHTML = `<div class="ranking-head"><span>#</span><span>Cantante</span><span></span></div>`;
-    ranking.forEach((r, i) => {
+    ranked.forEach(r => {
       const row = document.createElement('div');
-      row.className = 'ranking-row';
+      row.className = 'ranking-row' + (r.exAequo ? ' ex-aequo' : '');
       const name = r.name || r.singer || '';
       const song = r.song || '';
       row.innerHTML = `
-        <span class="r-pos">${i+1}</span>
+        <span class="r-pos">${r.rankLabel}</span>
         <div style="min-width:0">
           <div class="r-name">${name}</div>
           ${song ? `<div class="r-song">♪ ${song}</div>` : ''}
+          ${r.exAequo ? `<div class="ex-aequo-badge">ex-aequo</div>` : ''}
         </div>
         <span></span>`;
       card.appendChild(row);
@@ -1078,11 +1144,13 @@ async function adminShowTop3() {
       }
       top3names = source.slice(0,3).map(r => r.name || r.singer || '');
       // Ordine corretto con medaglie
-      const medals = ['🥇','🥈','🥉'];
-      rows.innerHTML = top3names.map((name, i) => `
+      const ranked3 = assignOlympicRanksAdmin(source.slice(0,3));
+      const medalEmoji = ['🥇','🥈','🥉'];
+      rows.innerHTML = ranked3.map((r, i) => `
         <div style="margin-bottom:16px">
-          <div style="font-size:36px;margin-bottom:4px">${medals[i]}</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text)">${name}</div>
+          <div style="font-size:36px;margin-bottom:4px">${r.exAequo ? r.rankLabel : (medalEmoji[i]||r.rankLabel)}</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text)">${r.name||r.singer||''}</div>
+          ${r.exAequo ? `<div class="ex-aequo-badge" style="margin:4px auto 0;display:inline-block">ex-aequo</div>` : ''}
         </div>`).join('');
     } else {
       // Serate 1/2: shuffle come in notaio — i nomi appaiono in ordine casuale senza medaglie
