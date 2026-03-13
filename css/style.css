@@ -245,7 +245,7 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .btn-reveal    { background:rgba(201,168,76,.1); border-color:rgba(201,168,76,.3); color:var(--gold); }
 
 /* ── TOAST ── */
-.toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%) translateY(14px); background:var(--surf3); border:1px solid rgba(255,255,255,.12); color:var(--text); padding:12px 22px; border-radius:100px; font-size:14px; white-space:nowrap; opacity:0; transition:opacity .28s,transform .28s; pointer-events:none; z-index:999; max-width:90vw; text-align:center; }
+.toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%) translateY(14px); background:var(--surf3); border:1px solid rgba(255,255,255,.12); color:var(--text); padding:12px 20px; border-radius:16px; font-size:13px; white-space:normal; line-height:1.45; opacity:0; transition:opacity .28s,transform .28s; pointer-events:none; z-index:999; max-width:min(340px,88vw); text-align:center; word-break:break-word; }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
 /* ── OVERLAY ── */
@@ -553,20 +553,15 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   border: 1px solid rgba(255,255,255,.07);
   border-radius: var(--r-sm);
   padding: 10px 12px;
-  cursor: grab;
-  transition: background .15s, opacity .15s;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
   user-select: none;
 }
-.order-row:active  { cursor: grabbing; }
-.order-row.dragging   { opacity: .4; }
-.order-row.drag-over  { border-color: var(--gold); background: rgba(201,168,76,.1); }
-
-.order-drag-handle {
-  font-size: 18px;
-  color: var(--muted);
-  opacity: .5;
-  flex-shrink: 0;
-  line-height: 1;
+.order-row:active  { transform: scale(.98); }
+.order-row.order-selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.15);
+  box-shadow: 0 0 0 2px rgba(201,168,76,.3);
 }
 .order-info {
   display: flex;
@@ -642,4 +637,10 @@ body.show-recaptcha .grecaptcha-badge { visibility: hidden !important; }
   padding: 0;
   margin-top: 4px;
   text-decoration: underline;
+}
+
+.btn-role:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+  pointer-events: none;
 }
