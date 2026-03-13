@@ -88,7 +88,8 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .phone-screen { min-height:100svh; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; }
 .phone-screen h2 { font-family:'Playfair Display',serif; font-size:26px; font-weight:900; margin-bottom:8px; }
 .phone-screen h2 span { color:var(--gold); }
-.phone-screen p { color:var(--muted); font-size:14px; margin-bottom:28px; max-width:280px; }
+.phone-screen p { color:var(--muted); font-size:14px; margin-bottom:28px; max-width:280px; text-align:center; width:100%; }
+#phone-step-1, #phone-step-2 { display:flex; flex-direction:column; align-items:center; width:100%; }
 .phone-input-wrap { display:flex; gap:8px; width:100%; max-width:300px; margin-bottom:12px; }
 .phone-prefix { background:var(--surf2); border:1.5px solid rgba(255,255,255,.1); border-radius:var(--r-sm); color:var(--text); font-family:'DM Sans',sans-serif; font-size:16px; padding:14px 12px; width:72px; text-align:center; outline:none; -webkit-appearance:none; transition:border-color .2s; }
 .field-input  { flex:1; background:var(--surf2); border:1.5px solid rgba(255,255,255,.1); border-radius:var(--r-sm); color:var(--text); font-family:'DM Sans',sans-serif; font-size:16px; padding:14px 16px; outline:none; -webkit-appearance:none; transition:border-color .2s; width:100%; }
