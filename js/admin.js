@@ -737,6 +737,14 @@ function closeOverlay(id) {
   if (!el) return;
   el.style.display = 'none';
   if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
+  // Rilascia il lock associato all'overlay, qualunque sia il modo di uscita
+  if (id === 'overlay-singers' && window._editingSerata) {
+    releaseLock(`singers_s${window._editingSerata}`).catch(() => {});
+  }
+  if (id === 'overlay-order') {
+    releaseLock('final_order').catch(() => {});
+    _selectedOrderIdx = null;
+  }
 }
 
 // ══════════════════════════════════════════════

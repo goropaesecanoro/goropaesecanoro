@@ -898,6 +898,12 @@ function closeOverlay(id) {
   if (!el) return;
   el.style.display = 'none';
   if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
+  // Se si esce dall'overlay voti (in qualsiasi modo), rilascia il lock sul giudice corrente
+  if (id === 'overlay-judges' && selectedJudge) {
+    releaseJudgeLock(currentSerata, selectedJudge).catch(() => {});
+    selectedJudge = '';
+    renderJudgesPreview();
+  }
 }
 
 async function signOutNotaio() {
