@@ -192,3 +192,4 @@ window.sendSMS           = sendSMS;
 window.verifyOTP         = verifyOTP;
 window.backToPhoneStep1  = () => { hideRecaptchaBadge(); backToPhoneStep1(); };
 window.signOutUser       = signOutUser;
+window.showHaveCode      = showHaveCode;
