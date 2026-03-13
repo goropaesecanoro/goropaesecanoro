@@ -106,7 +106,7 @@ function setupOTPInputs() {
     el.oninput = e => {
       if (e.target.value.length === 1 && i < 5)
         document.getElementById(`otp-${i+1}`).focus();
-      if (getOTPCode().length === 6) verifyOTP();
+      // Nessuna verifica automatica — l'utente preme esplicitamente "Verifica e accedi"
     };
     el.onkeydown = e => {
       if (e.key === 'Backspace' && !el.value && i > 0)
@@ -146,7 +146,7 @@ export function backToPhoneStep1() {
   // Non cancellare sessionStorage qui — l'utente potrebbe voler riusare il codice
 }
 
-export function showHaveCode() {
+export async function showHaveCode() {
   // Prova prima il numero nel campo, poi il sessionStorage
   const prefix    = document.getElementById('phone-prefix')?.value.trim() || '+39';
   const numInput  = document.getElementById('phone-number')?.value.trim().replace(/\s/g,'') || '';
@@ -157,13 +157,44 @@ export function showHaveCode() {
     document.getElementById('phone-number')?.focus();
     return;
   }
-  // Mostra direttamente lo step inserimento codice
-  document.getElementById('phone-step-1').style.display = 'none';
-  document.getElementById('phone-step-2').style.display = '';
-  document.getElementById('otp-sent-to').textContent =
-    `Inserisci il codice ricevuto per ${fullNumber}.`;
-  setupOTPInputs();
-  document.getElementById('otp-0').focus();
+  // Se confirmResult è ancora valido (stessa sessione, no reload) vai direttamente all'OTP
+  if (confirmResult) {
+    document.getElementById('phone-step-1').style.display = 'none';
+    document.getElementById('phone-step-2').style.display = '';
+    document.getElementById('otp-sent-to').textContent =
+      `Inserisci il codice ricevuto per ${fullNumber}.`;
+    setupOTPInputs();
+    document.getElementById('otp-0').focus();
+    return;
+  }
+  // confirmResult è null (es. dopo reload) — bisogna reinviare l'SMS per avere un nuovo token
+  // Ma Firebase restituisce lo stesso codice se quello precedente è ancora valido (~10 min)
+  const btn = document.getElementById('btn-have-code');
+  btn.disabled = true; btn.textContent = 'Invio in corso…';
+  try {
+    if (!window._rcv) initRecaptcha();
+    await window._rcv.render().catch(() => {});
+    confirmResult = await signInWithPhoneNumber(auth, fullNumber, window._rcv);
+    sessionStorage.setItem('phoneAuthNumber', fullNumber);
+    sessionStorage.setItem('phoneAuthPending', '1');
+    document.getElementById('phone-step-1').style.display = 'none';
+    document.getElementById('phone-step-2').style.display = '';
+    document.getElementById('otp-sent-to').textContent =
+      `Inserisci il codice ricevuto per ${fullNumber}.`;
+    setupOTPInputs();
+    document.getElementById('otp-0').focus();
+  } catch(e) {
+    let msg = 'Errore: ';
+    if (e.code === 'auth/invalid-phone-number')   msg += 'numero non valido';
+    else if (e.code === 'auth/too-many-requests')  msg += 'troppi tentativi, riprova tra poco';
+    else if (e.code === 'auth/captcha-check-failed') msg += 'reCAPTCHA fallito, ricarica la pagina';
+    else msg += (e.code || e.message);
+    showToast(msg, 5000);
+    initRecaptcha();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = savedNum ? `Ho già il codice per ${fullNumber}` : 'Ho già un codice';
+  }
 }
 
 function hideRecaptchaBadge() {
