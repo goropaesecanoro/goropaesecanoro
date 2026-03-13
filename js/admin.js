@@ -1034,8 +1034,7 @@ function startJuryRankingWatcher() {
         }
         // Toast solo se la classifica è APPENA comparsa (non c'era al caricamento)
         if (!_listenerFirstFire && !_hadRanking) {
-          showToast('📊 Classifiche disponibili!
-Vedi sezione Classifica giuria tecnica', 180000);
+          showToast('📊 Classifiche disponibili! Vedi sezione Classifica giuria tecnica', 180000);
         }
         _hadRanking = true;
       } else {
