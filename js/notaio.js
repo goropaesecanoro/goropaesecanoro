@@ -63,13 +63,15 @@ async function acquireJudgeLock(serata, judgeName) {
       lockedAt:  now,
       expiresAt: now + LOCK_TTL_MS,
     });
+    _activeLockKey = key; // salva chiave esatta per il release
     return true;
   } catch(e) { return true; }
 }
 
 async function releaseJudgeLock(serata, judgeName) {
-  if (!judgeName) return;
-  const key = `jury_s${serata}_${judgeName.replace(/\s+/g,'_')}`;
+  const key = _activeLockKey || `jury_s${serata}_${(judgeName||'').replace(/\s+/g,'_')}`;
+  _activeLockKey = null;
+  if (!key || key === `jury_s${serata}_`) return;
   try {
     await deleteDoc(doc(db, 'editing_locks', key));
   } catch(e) {}
@@ -200,7 +202,8 @@ async function loadJudges() {
   renderJudgeSelector();
 }
 
-let selectedJudge = '';
+let selectedJudge   = '';
+let _activeLockKey  = null; // chiave esatta del lock acquisito
 
 function renderJudgesPreview() {
   const el = document.getElementById('judges-list-preview');
@@ -251,7 +254,8 @@ async function selectJudge(judgeName) {
   // Secondo tap sullo stesso giudice — chiudi e rilascia lock
   if (selectedJudge === judgeName) {
     await releaseJudgeLock(currentSerata, selectedJudge);
-    selectedJudge = '';
+    selectedJudge  = '';
+    _activeLockKey = null;
     syncHiddenSelector('');
     renderJudgesPreview();
     const grid    = document.getElementById('votes-grid');
