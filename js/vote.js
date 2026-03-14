@@ -46,6 +46,20 @@ async function saveUserProfile(user) {
 }
 
 // ══════════════════════════════════════════════
+//  PANIC BUTTON — blocco SMS in tempo reale
+// ══════════════════════════════════════════════
+function applySmsBlock(smsOff) {
+  const btnPhone = document.getElementById('btn-phone-auth');
+  const btnDivider = document.querySelector('.auth-divider');
+  const btnSms  = document.getElementById('btn-send-sms');
+  const btnCode = document.getElementById('btn-have-code');
+  if (btnPhone)   { btnPhone.style.display  = smsOff ? 'none' : ''; }
+  if (btnDivider) { btnDivider.style.display = smsOff ? 'none' : ''; }
+  if (btnSms)  { btnSms.disabled  = smsOff; btnSms.style.opacity  = smsOff ? '.3' : ''; }
+  if (btnCode) { btnCode.disabled = smsOff; btnCode.style.opacity = smsOff ? '.3' : ''; }
+}
+
+// ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
 export async function initVoteApp() {
@@ -56,6 +70,7 @@ export async function initVoteApp() {
       appConfig     = snap.data();
       currentSerata = appConfig.serata || 1;
       updateSerataUI();
+      applySmsBlock(appConfig.smsDisabilitato === true);
       if (currentUser) evaluateState(currentUser).catch(e => console.error('evaluateState error:', e));
     }
   });
@@ -135,11 +150,6 @@ async function showClosedScreen() {
   if (randomNote) randomNote.style.display = 'none';
   const dynEl = document.getElementById('closed-dynamic');
   if (dynEl) dynEl.innerHTML = '';
-
-  // Se votoMaiAperto non è mai stato impostato a false → votazioni non ancora aperte
-  const inAttesa = appConfig.votoMaiAperto !== false;
-  document.getElementById('closed-waiting')?.style.setProperty('display', inAttesa ? 'flex' : 'none');
-  document.getElementById('closed-ended')?.style.setProperty('display', inAttesa ? 'none' : 'flex');
 
   // ── SERATA 3: qualsiasi contenuto da mostrare va su screen-reveal ──
   if (currentSerata === 3) {

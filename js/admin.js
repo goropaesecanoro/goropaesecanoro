@@ -235,6 +235,7 @@ function updateSwitches() {
   document.getElementById('toggle-top5-wrap')?.classList.toggle('disabled', votoAperto);
   document.getElementById('toggle-top5finale-wrap')?.classList.toggle('disabled', votoAperto);
   document.getElementById('toggle-svela-wrap')?.classList.toggle('disabled', votoAperto);
+  updatePanicButton();
 }
 
 function setSwitchState(id, state) {
@@ -270,7 +271,7 @@ async function confirmSerataChange() {
   if (!pendingSerata || pendingSerata === currentSerata) return;
   closeOverlay('overlay-serata');
   currentSerata = pendingSerata;
-  await saveConfig({ serata: currentSerata });
+  await saveConfig({ serata: currentSerata, votoMaiAperto: true });
   updateSerataLabel();
   updateSwitches();
   refreshRanking();
@@ -291,9 +292,44 @@ async function toggleVoto(checked) {
   if (checked) await saveConfig({ mostraTop5: false, svelaClassifica: false });
   updateSwitches();
   showToast(checked ? '🟢 Votazioni aperte' : '🔴 Votazioni chiuse');
-  // Aggiorna classifica immediatamente + gestisci auto-refresh
   await refreshRanking();
   updateRankingAutoRefresh(checked);
+}
+
+// ══════════════════════════════════════════════
+//  PANIC BUTTON — DISABILITA SMS
+// ══════════════════════════════════════════════
+function confirmPanicSMS() {
+  const smsOff = appConfig.smsDisabilitato === true;
+  document.getElementById('panic-confirm-title').textContent =
+    smsOff ? '⚠️ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  document.getElementById('panic-confirm-body').textContent =
+    smsOff
+      ? 'Vuoi riabilitare il login tramite numero di telefono? Gli utenti potranno nuovamente accedere via SMS.'
+      : 'Vuoi disabilitare il login tramite numero di telefono? Il pulsante SMS verrà rimosso dalla schermata di accesso e i codici non potranno più essere inviati. Usa solo in caso di emergenza budget.';
+  const btn = document.getElementById('panic-confirm-btn');
+  btn.textContent = smsOff ? 'Sì, riabilita SMS' : 'Sì, disabilita SMS';
+  btn.style.background = smsOff ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
+  btn.style.color = smsOff ? '' : '#fff';
+  openOverlay('overlay-panic-confirm');
+}
+
+async function executePanicSMS() {
+  closeOverlay('overlay-panic-confirm');
+  const smsOff = appConfig.smsDisabilitato === true;
+  await saveConfig({ smsDisabilitato: !smsOff });
+  updatePanicButton();
+  showToast(smsOff ? '✅ Accesso SMS riabilitato' : '🚨 Accesso SMS disabilitato');
+}
+
+function updatePanicButton() {
+  const btn = document.getElementById('btn-panic-sms');
+  if (!btn) return;
+  const smsOff = appConfig.smsDisabilitato === true;
+  btn.textContent = smsOff ? '✅ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  btn.style.background = smsOff
+    ? 'linear-gradient(135deg,var(--green),#2d7a4f)'
+    : 'linear-gradient(135deg,#E85D5D,#a03030)';
 }
 
 function updateRankingAutoRefresh(votoAperto) {
@@ -597,6 +633,7 @@ async function resetVotes() {
     const snap = await getDocs(collection(db, `votes_s${currentSerata}`));
     await Promise.all(snap.docs.map(d => deleteDoc(doc(db, `votes_s${currentSerata}`, d.id))));
     await deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{});
+    await saveConfig({ votoMaiAperto: true });
     refreshRanking();
     showToast('Voti azzerati ✓');
   } catch(e) { showToast('Errore durante il reset'); }
@@ -936,6 +973,8 @@ window.computeAndShowFinalRanking = computeAndShowFinalRanking;
 window.exportCSV              = exportCSV;
 window.confirmReset           = () => openOverlay('overlay-reset');
 window.resetVotes             = resetVotes;
+window.confirmPanicSMS        = confirmPanicSMS;
+window.executePanicSMS        = executePanicSMS;
 
 // ══════════════════════════════════════════════
 //  LOCK EDITOR CONCORRENTE
