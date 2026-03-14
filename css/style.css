@@ -78,6 +78,27 @@ html, body { min-height: 100%; background: var(--deep); color: var(--text); font
 .closed-title span { color:var(--gold); }
 .closed-sub   { margin-top:10px; color:var(--muted); font-size:15px; max-width:280px; animation:fadeDown .5s .2s ease both; }
 
+/* Icona musicale pulsante */
+.waiting-icon { animation:fadeDown .5s ease both, waitingPulse 2.4s 1s ease-in-out infinite; }
+@keyframes waitingPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+
+/* Chip "non chiudere" */
+.waiting-chip {
+  display:inline-flex; align-items:center; gap:10px;
+  margin-top:28px; padding:12px 18px;
+  background:rgba(201,168,76,.1);
+  border:1px solid rgba(201,168,76,.3);
+  border-radius:100px;
+  font-size:13px; color:var(--gold); font-weight:500;
+  max-width:300px; line-height:1.4; text-align:left;
+  animation:fadeDown .5s .3s ease both;
+}
+.waiting-dot {
+  flex-shrink:0; width:8px; height:8px; border-radius:50%;
+  background:var(--gold);
+  animation:pulse 1.5s infinite;
+}
+
 
 
 
