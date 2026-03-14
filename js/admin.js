@@ -285,7 +285,9 @@ async function confirmSerataChange() {
 //  SWITCH HANDLERS
 // ══════════════════════════════════════════════
 async function toggleVoto(checked) {
-  await saveConfig({ votoAperto: checked });
+  const updates = { votoAperto: checked };
+  if (checked && appConfig.votoMaiAperto !== false) updates.votoMaiAperto = false;
+  await saveConfig(updates);
   if (checked) await saveConfig({ mostraTop5: false, svelaClassifica: false });
   updateSwitches();
   showToast(checked ? '🟢 Votazioni aperte' : '🔴 Votazioni chiuse');

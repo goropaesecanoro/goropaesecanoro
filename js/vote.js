@@ -136,6 +136,11 @@ async function showClosedScreen() {
   const dynEl = document.getElementById('closed-dynamic');
   if (dynEl) dynEl.innerHTML = '';
 
+  // Se votoMaiAperto non è mai stato impostato a false → votazioni non ancora aperte
+  const inAttesa = appConfig.votoMaiAperto !== false;
+  document.getElementById('closed-waiting')?.style.setProperty('display', inAttesa ? 'flex' : 'none');
+  document.getElementById('closed-ended')?.style.setProperty('display', inAttesa ? 'none' : 'flex');
+
   // ── SERATA 3: qualsiasi contenuto da mostrare va su screen-reveal ──
   if (currentSerata === 3) {
     const showReveal = appConfig.svelaClassifica || appConfig.mostraTop5Finale;
