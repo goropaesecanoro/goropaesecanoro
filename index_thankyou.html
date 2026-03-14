@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="img/locandina.png" type="image/png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Goro Paese Canoro 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="screen flex-screen hero active" id="screen-hero">
+  <img src="img/locandina.png" alt="2° Goro Paese Canoro Festival" class="hero-image">
+  <div class="hero-edition">Edizione 2026</div>
+
+  <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:18px;animation:fadeDown .7s .2s ease both">
+    <p style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold);line-height:1.3;max-width:320px">
+      Grazie a tutti per una serata indimenticabile!
+    </p>
+    <p style="font-size:15px;color:var(--muted);max-width:300px;line-height:1.7">
+      Un ringraziamento speciale va a tutti i <strong style="color:var(--text)">cantanti</strong> che hanno saputo emozionarci, al pubblico che ha partecipato con entusiasmo, e a tutto lo <strong style="color:var(--text)">staff dello Young Club di Goro</strong> per l'organizzazione impeccabile delle serate.
+    </p>
+    <div style="width:48px;height:1px;background:rgba(201,168,76,.3);margin:4px 0"></div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6">
+      🎙️ &nbsp;Goro Paese Canoro Festival &nbsp;•&nbsp; Edizione 2026
+    </p>
+  </div>
+</div>
+
+<div class="copyright-bar">© 2026 Roberto Gennari</div>
+
+<script>
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;--op:${0.3+Math.random()*0.5}`;
+    container.appendChild(s);
+  }
+</script>
+</body>
+</html>
