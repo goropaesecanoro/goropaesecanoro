@@ -296,42 +296,6 @@ async function toggleVoto(checked) {
   updateRankingAutoRefresh(checked);
 }
 
-// ══════════════════════════════════════════════
-//  PANIC BUTTON — DISABILITA SMS
-// ══════════════════════════════════════════════
-function confirmPanicSMS() {
-  const smsOff = appConfig.smsDisabilitato === true;
-  document.getElementById('panic-confirm-title').textContent =
-    smsOff ? '⚠️ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
-  document.getElementById('panic-confirm-body').textContent =
-    smsOff
-      ? 'Vuoi riabilitare il login tramite numero di telefono? Gli utenti potranno nuovamente accedere via SMS.'
-      : 'Vuoi disabilitare il login tramite numero di telefono? Il pulsante SMS verrà rimosso dalla schermata di accesso e i codici non potranno più essere inviati. Usa solo in caso di emergenza budget.';
-  const btn = document.getElementById('panic-confirm-btn');
-  btn.textContent = smsOff ? 'Sì, riabilita SMS' : 'Sì, disabilita SMS';
-  btn.style.background = smsOff ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
-  btn.style.color = smsOff ? '' : '#fff';
-  openOverlay('overlay-panic-confirm');
-}
-
-async function executePanicSMS() {
-  closeOverlay('overlay-panic-confirm');
-  const smsOff = appConfig.smsDisabilitato === true;
-  await saveConfig({ smsDisabilitato: !smsOff });
-  updatePanicButton();
-  showToast(smsOff ? '✅ Accesso SMS riabilitato' : '🚨 Accesso SMS disabilitato');
-}
-
-function updatePanicButton() {
-  const btn = document.getElementById('btn-panic-sms');
-  if (!btn) return;
-  const smsOff = appConfig.smsDisabilitato === true;
-  btn.textContent = smsOff ? '✅ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
-  btn.style.background = smsOff
-    ? 'linear-gradient(135deg,var(--green),#2d7a4f)'
-    : 'linear-gradient(135deg,#E85D5D,#a03030)';
-}
-
 function updateRankingAutoRefresh(votoAperto) {
   // Ferma sempre il timer esistente
   if (rankingInterval) { clearInterval(rankingInterval); rankingInterval = null; }
@@ -958,6 +922,42 @@ function editProfileName(uid, currentLabel) {
     .catch(e => showToast('Errore: ' + e.message));
 }
 
+
+// ══════════════════════════════════════════════
+//  PANIC BUTTON — DISABILITA SMS
+// ══════════════════════════════════════════════
+function confirmPanicSMS() {
+  const smsOff = appConfig.smsDisabilitato === true;
+  document.getElementById('panic-confirm-title').textContent =
+    smsOff ? '⚠️ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  document.getElementById('panic-confirm-body').textContent =
+    smsOff
+      ? 'Vuoi riabilitare il login tramite numero di telefono? Gli utenti potranno nuovamente accedere via SMS.'
+      : 'Vuoi disabilitare il login tramite numero di telefono? Il pulsante SMS verrà rimosso dalla schermata di accesso e i codici non potranno più essere inviati. Usa solo in caso di emergenza budget.';
+  const btn = document.getElementById('panic-confirm-btn');
+  btn.textContent = smsOff ? 'Sì, riabilita SMS' : 'Sì, disabilita SMS';
+  btn.style.background = smsOff ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
+  btn.style.color = smsOff ? '' : '#fff';
+  openOverlay('overlay-panic-confirm');
+}
+
+async function executePanicSMS() {
+  closeOverlay('overlay-panic-confirm');
+  const smsOff = appConfig.smsDisabilitato === true;
+  await saveConfig({ smsDisabilitato: !smsOff });
+  updatePanicButton();
+  showToast(smsOff ? '✅ Accesso SMS riabilitato' : '🚨 Accesso SMS disabilitato');
+}
+
+function updatePanicButton() {
+  const btn = document.getElementById('btn-panic-sms');
+  if (!btn) return;
+  const smsOff = appConfig.smsDisabilitato === true;
+  btn.textContent = smsOff ? '✅ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  btn.style.background = smsOff
+    ? 'linear-gradient(135deg,var(--green),#2d7a4f)'
+    : 'linear-gradient(135deg,#E85D5D,#a03030)';
+}
 
 window.openSerataChooser      = openSerataChooser;
 window.selectPendingSerata    = selectPendingSerata;

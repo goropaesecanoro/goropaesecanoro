@@ -49,12 +49,12 @@ async function saveUserProfile(user) {
 //  PANIC BUTTON — blocco SMS in tempo reale
 // ══════════════════════════════════════════════
 function applySmsBlock(smsOff) {
-  const btnPhone = document.getElementById('btn-phone-auth');
+  const btnPhone   = document.getElementById('btn-phone-auth');
   const btnDivider = document.querySelector('.auth-divider');
-  const btnSms  = document.getElementById('btn-send-sms');
-  const btnCode = document.getElementById('btn-have-code');
-  if (btnPhone)   { btnPhone.style.display  = smsOff ? 'none' : ''; }
-  if (btnDivider) { btnDivider.style.display = smsOff ? 'none' : ''; }
+  const btnSms     = document.getElementById('btn-send-sms');
+  const btnCode    = document.getElementById('btn-have-code');
+  if (btnPhone)   { btnPhone.style.display   = smsOff ? 'none' : ''; }
+  if (btnDivider) { btnDivider.style.display  = smsOff ? 'none' : ''; }
   if (btnSms)  { btnSms.disabled  = smsOff; btnSms.style.opacity  = smsOff ? '.3' : ''; }
   if (btnCode) { btnCode.disabled = smsOff; btnCode.style.opacity = smsOff ? '.3' : ''; }
 }
@@ -150,6 +150,13 @@ async function showClosedScreen() {
   if (randomNote) randomNote.style.display = 'none';
   const dynEl = document.getElementById('closed-dynamic');
   if (dynEl) dynEl.innerHTML = '';
+
+  // Mostra il blocco corretto: in attesa vs votazioni terminate
+  const inAttesa = appConfig.votoMaiAperto !== false;
+  const wEl = document.getElementById('closed-waiting');
+  const eEl = document.getElementById('closed-ended');
+  if (wEl) wEl.style.cssText = inAttesa ? 'display:flex;flex-direction:column;align-items:center;text-align:center;width:100%' : 'display:none';
+  if (eEl) eEl.style.cssText = inAttesa ? 'display:none' : 'display:flex;flex-direction:column;align-items:center;text-align:center;width:100%';
 
   // ── SERATA 3: qualsiasi contenuto da mostrare va su screen-reveal ──
   if (currentSerata === 3) {
