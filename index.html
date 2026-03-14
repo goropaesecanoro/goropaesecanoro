@@ -58,7 +58,7 @@
       Accedi con Google
     </button>
     <div class="auth-divider">oppure</div>
-    <button class="btn-auth btn-phone" onclick="showPhoneAuth()">
+    <button class="btn-auth btn-phone" id="btn-phone-auth" onclick="showPhoneAuth()">
       📱 Accedi con numero di telefono
     </button>
   </div>
@@ -97,32 +97,15 @@
 
 <!-- ══ VOTAZIONI CHIUSE ══════════════════════════ -->
 <div class="screen flex-screen closed-screen" id="screen-closed">
-
-  <!-- Stato A: votazioni non ancora aperte -->
-  <div id="closed-waiting" style="display:none;flex-direction:column;align-items:center;text-align:center;width:100%">
-    <div class="closed-icon waiting-icon">🎶</div>
-    <h2 class="closed-title">Votazioni <span>in arrivo!</span></h2>
-    <p class="closed-sub">I conduttori annunceranno l'apertura delle votazioni al termine delle esibizioni.</p>
-    <p class="closed-sub" style="margin-top:8px">Ascolta i cantanti, lasciati emozionare e tieniti pronto a votare i tuoi preferiti!</p>
-    <div class="waiting-chip">
-      <span class="waiting-dot"></span>
-      Non chiudere questa pagina — quando sarà il momento potrai votare direttamente qui!
-    </div>
+  <div class="closed-icon">🎙️</div>
+  <h2 class="closed-title">Votazioni <span>chiuse</span></h2>
+  <p class="closed-sub">Le votazioni per questa serata sono terminate. Grazie per la partecipazione!</p>
+  <div id="closed-dynamic" style="width:100%;max-width:340px;text-align:left"></div>
+  <div id="closed-random-note" style="display:none;margin-top:16px;font-size:12px;color:var(--muted);text-align:center;max-width:280px;line-height:1.6">
+    I preferiti sono mostrati in <strong style="color:var(--gold)">ordine casuale</strong> — non riflettono la classifica reale.<br>
+    Non includono le votazioni della giuria tecnica.<br>
+    <span style="opacity:.7"><a onclick="location.reload()" style="color:var(--gold);cursor:pointer;text-decoration:underline">🔄 Ricarica la pagina</a> per vedere un ordine diverso</span>
   </div>
-
-  <!-- Stato B: votazioni già avvenute e chiuse -->
-  <div id="closed-ended" style="display:none;flex-direction:column;align-items:center;text-align:center;width:100%">
-    <div class="closed-icon">🎙️</div>
-    <h2 class="closed-title">Votazioni <span>chiuse</span></h2>
-    <p class="closed-sub">Le votazioni per questa serata sono terminate. Grazie per la partecipazione!</p>
-    <div id="closed-dynamic" style="width:100%;max-width:340px;text-align:left"></div>
-    <div id="closed-random-note" style="display:none;margin-top:16px;font-size:12px;color:var(--muted);text-align:center;max-width:280px;line-height:1.6">
-      I preferiti sono mostrati in <strong style="color:var(--gold)">ordine casuale</strong> — non riflettono la classifica reale.<br>
-      Non includono le votazioni della giuria tecnica.<br>
-      <span style="opacity:.7"><a onclick="location.reload()" style="color:var(--gold);cursor:pointer;text-decoration:underline">🔄 Ricarica la pagina</a> per vedere un ordine diverso</span>
-    </div>
-  </div>
-
 </div>
 
 <!-- ══ CLASSIFICA SVELATA ════════════════════════ -->
