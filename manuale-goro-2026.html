@@ -388,6 +388,16 @@ hr {
     <li><a href="#s6">Sicurezza e concorrenza</a></li>
     <li><a href="#s7">Flusso operativo serata tipo</a></li>
     <li><a href="#s8">Risoluzione problemi</a></li>
+    <li><a href="#s9">Appendice — Come funziona la classifica</a>
+      <ol class="sub">
+        <li><a href="#s9a">Perché normalizzare i voti?</a></li>
+        <li><a href="#s9b">Cos'è lo Z-score</a></li>
+        <li><a href="#s9c">Dal Z-score al punteggio finale</a></li>
+        <li><a href="#s9d">Il bonus pubblico</a></li>
+        <li><a href="#s9e">La classifica festival</a></li>
+        <li><a href="#s9f">Quanto conta davvero il pubblico?</a></li>
+      </ol>
+    </li>
   </ol>
 </div>
 
@@ -907,6 +917,177 @@ hr {
   </table>
 
   <div class="note"><span class="wi">ℹ️</span><div>Per problemi non elencati qui: hard refresh della pagina (Ctrl+Shift+R su desktop, tieni premuto il pulsante di ricarica su mobile) risolve la maggior parte dei problemi di cache o stato inconsistente.</div></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SEZIONE 9 — APPENDICE STATISTICA -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="section" id="s9">
+  <div class="section-header">
+    <div class="section-icon">📐</div>
+    <div>
+      <span class="section-num">Appendice</span>
+      <h2>Come funziona la classifica</h2>
+    </div>
+  </div>
+
+  <p>Questa appendice spiega nel dettaglio il sistema di calcolo delle classifiche. Non è necessario conoscerla per usare l'app — ma capire la logica aiuta a interpretare i risultati e a rispondere a eventuali domande durante la serata.</p>
+
+  <div class="note"><span class="wi">ℹ️</span><div>I concetti qui spiegati sono presentati in forma semplificata, accessibile a tutti. Chi ha una formazione matematica troverà i dettagli tecnici nelle note a fondo paragrafo.</div></div>
+
+  <!-- ── 9a ── -->
+  <div class="subsection" id="s9a">
+    <h3>Perché normalizzare i voti?</h3>
+    <p>Immagina due giudici: il primo è <em>generoso</em> e tende a dare voti alti a tutti (8, 9, 9, 8, 7…), il secondo è <em>severo</em> e usa tutta la scala verso il basso (5, 6, 4, 7, 5…). Se sommiamo direttamente i voti, i cantanti valutati dal giudice generoso partono avvantaggiati, non perché siano più bravi, ma semplicemente perché il loro giudice usa punteggi più alti.</p>
+    <p>La normalizzazione risolve questo problema: trasforma i voti di ogni giudice in una scala comune, eliminando le differenze di "stile" personale. Quello che conta non è il voto assoluto dato da un giudice, ma <strong>quanto un cantante si è distinto rispetto agli altri cantanti valutati dallo stesso giudice</strong>.</p>
+    <div class="tip"><span class="wi">💡</span><div>In parole povere: non importa se il giudice A dà 8 e il giudice B dà 5 allo stesso cantante. Importa se quel cantante è andato meglio o peggio degli altri <em>secondo quel giudice specifico</em>.</div></div>
+  </div>
+
+  <!-- ── 9b ── -->
+  <div class="subsection" id="s9b">
+    <h3>Cos'è lo Z-score</h3>
+    <p>Lo Z-score (o punteggio standardizzato) è uno strumento statistico che misura <strong>di quante "distanze tipiche" un valore si allontana dalla media</strong>. È usato in moltissimi campi: dalla medicina alle scienze sociali, dalle analisi finanziarie alle valutazioni scolastiche.</p>
+
+    <h4>Un esempio concreto</h4>
+    <p>Supponiamo che un giudice abbia valutato 7 cantanti e la media dei suoi voti sia <strong>7.0</strong>. La "distanza tipica" tra i voti (chiamata deviazione standard) è <strong>1.5 punti</strong>.</p>
+    <p>Se un cantante ha ricevuto <strong>9.0</strong>, il suo Z-score è:</p>
+
+    <div class="card" style="text-align:center; font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 1px;">
+      Z = (9.0 − 7.0) / 1.5 = <strong style="color:var(--gold)">+1.33</strong>
+    </div>
+
+    <p>Significa che quel cantante si trova <strong>1.33 distanze tipiche sopra la media</strong> di quel giudice. Un altro cantante che ha preso 5.5 avrebbe Z = (5.5 − 7.0) / 1.5 = <strong>−1.0</strong>: si trova una distanza tipica sotto la media.</p>
+
+    <h4>Come si interpreta</h4>
+    <table>
+      <tr><th>Z-score</th><th>Significato</th></tr>
+      <tr><td><strong style="color:#7ecb7e">+2.0 o più</strong></td><td>Cantante eccezionale secondo questo giudice — molto sopra tutti gli altri</td></tr>
+      <tr><td><strong style="color:#a8e0a8">+1.0 / +2.0</strong></td><td>Chiaramente sopra la media</td></tr>
+      <tr><td><strong style="color:var(--muted)">−0.5 / +0.5</strong></td><td>Nella media — prestazione nella norma</td></tr>
+      <tr><td><strong style="color:#f0a0a0">−1.0 / −2.0</strong></td><td>Sotto la media secondo questo giudice</td></tr>
+      <tr><td><strong style="color:#f08080">−2.0 o meno</strong></td><td>Molto sotto la media</td></tr>
+    </table>
+
+    <div class="note"><span class="wi">ℹ️</span><div><strong>Nota tecnica:</strong> il sistema applica un "clip" a ±2.0: Z-score più estremi vengono riportati a ±2.0. Questo limita l'influenza di valutazioni eccezionalmente alte o basse di un singolo giudice, rendendo il sistema più robusto.</div></div>
+  </div>
+
+  <!-- ── 9c ── -->
+  <div class="subsection" id="s9c">
+    <h3>Dal Z-score al punteggio finale di giuria</h3>
+    <p>Il sistema calcola lo Z-score di ogni cantante per ogni giudice separatamente. Poi aggrega i risultati in tre passaggi:</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">
+          <strong>Z-score per giudice</strong>
+          <span>Per ogni giudice si calcolano gli Z-score di tutti i cantanti che ha valutato. In questo modo si "azzera" la severità o generosità personale di ciascuno.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">
+          <strong>Media degli Z-score</strong>
+          <span>Per ogni cantante si fa la media degli Z-score ricevuti da tutti i giudici. Se tre giudici assegnano Z = +1.2, +0.8, +1.5, il punteggio aggregato è (1.2 + 0.8 + 1.5) / 3 = <strong>+1.17</strong>.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">
+          <strong>Rescaling 2–20</strong>
+          <span>Gli Z-score aggregati vengono convertiti in una scala da 2 a 20 per rendere i punteggi leggibili. Il cantante con Z più alto ottiene 20, quello con Z più basso ottiene 2. Tutti gli altri si distribuiscono proporzionalmente in mezzo.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip"><span class="wi">💡</span><div>La scala 2–20 garantisce che anche il cantante "peggiore" secondo la giuria riceva un punteggio positivo. Non esiste punteggio zero o negativo nella classifica finale.</div></div>
+
+    <p>Questo punteggio (da 2 a 20) è quello che viene mostrato nella <strong>classifica giuria tecnica</strong>. Più è vicino a 20, più il cantante ha convinto in modo uniforme tutti i giudici.</p>
+  </div>
+
+  <!-- ── 9d ── -->
+  <div class="subsection" id="s9d">
+    <h3>Il bonus pubblico</h3>
+    <p>Al punteggio della giuria tecnica si somma un bonus basato sulla classifica del voto pubblico:</p>
+
+    <table>
+      <tr><th>Posizione nella classifica pubblica</th><th>Bonus aggiunto</th></tr>
+      <tr><td>🥇 1° posto</td><td><strong style="color:var(--gold)">+5 punti</strong></td></tr>
+      <tr><td>🥈 2° posto</td><td><strong style="color:var(--gold)">+4 punti</strong></td></tr>
+      <tr><td>🥉 3° posto</td><td><strong style="color:var(--gold)">+3 punti</strong></td></tr>
+      <tr><td>4° posto</td><td><strong>+2 punti</strong></td></tr>
+      <tr><td>5° posto</td><td><strong>+1 punto</strong></td></tr>
+      <tr><td>Dal 6° posto in poi</td><td>0 punti</td></tr>
+    </table>
+
+    <p>Il punteggio mostrato nella <strong>classifica con bonus pubblico</strong> è quindi:</p>
+    <div class="card" style="text-align:center; font-size:15px; font-weight:500;">
+      Punteggio finale = Punteggio giuria (2–20) + Bonus pubblico (0–5)
+    </div>
+  </div>
+
+  <!-- ── 9e ── -->
+  <div class="subsection" id="s9e">
+    <h3>La classifica festival (Serata Finale)</h3>
+    <p>La classifica del festival combina i risultati di tutte e tre le serate. Per ogni cantante si sommano i punteggi finali (giuria + bonus pubblico) ottenuti nelle tre serate:</p>
+
+    <div class="card" style="text-align:center; font-size:15px; font-weight:500;">
+      Punteggio festival = Serata 1 + Serata 2 + Serata 3
+    </div>
+
+    <p>Ogni cantante ha partecipato a due serate su tre (Serata 1 o Serata 2, più la Serata Finale). I punteggi delle serate in cui non ha gareggiato valgono 0.</p>
+
+    <div class="note"><span class="wi">ℹ️</span><div>Il sistema somma punteggi già normalizzati — non è una semplice somma di voti grezzi. Un cantante che ha convinto costantemente nelle due serate in cui ha gareggiato avrà un vantaggio rispetto a chi è stato brillante in una sola.</div></div>
+  </div>
+
+  <!-- ── 9f ── -->
+  <div class="subsection" id="s9f">
+    <h3>Quanto conta davvero il voto del pubblico?</h3>
+    <p>Il bonus pubblico massimo è <strong>5 punti</strong>. La scala della giuria va da 2 a 20, quindi l'ampiezza massima è <strong>18 punti</strong>. In totale un punteggio può andare da 2 a 25.</p>
+    <p>L'incidenza reale del bonus dipende da quanto le due classifiche — pubblica e tecnica — si assomigliano o divergono:</p>
+
+    <table>
+      <tr>
+        <th>Scenario</th>
+        <th>Cosa succede</th>
+        <th>Posizioni invertite</th>
+        <th>Incidenza %</th>
+      </tr>
+      <tr>
+        <td><strong style="color:#7ecb7e">Pubblico e giuria d'accordo</strong></td>
+        <td>Il bonus rinforza chi era già in testa. Le posizioni non cambiano.</td>
+        <td>0–1</td>
+        <td>5–10%</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--gold)">Parziale sovrapposizione</strong></td>
+        <td>Il bonus sposta qualche posizione ai margini della classifica.</td>
+        <td>1–2</td>
+        <td>15–20%</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#f0a0a0">Pubblico e giuria in disaccordo</strong></td>
+        <td>Un cantante molto amato dal pubblico ma nella media tecnica può scalare fino a 3–4 posizioni.</td>
+        <td>2–4</td>
+        <td>25–30%</td>
+      </tr>
+    </table>
+
+    <h4>Un esempio numerico</h4>
+    <p>Cantante A: punteggio giuria <strong>15</strong>, non nella top 5 pubblica → totale <strong>15</strong><br>
+    Cantante B: punteggio giuria <strong>11</strong>, primo nel voto pubblico → totale <strong>11 + 5 = 16</strong></p>
+    <p>Il cantante B supera il cantante A nonostante la giuria preferisse A. Questo è il caso limite in cui il pubblico <em>ribalta</em> la classifica tecnica.</p>
+    <p>Però se il distacco della giuria fosse stato maggiore — A con 17, B con 11 — il bonus non basterebbe: 11 + 5 = 16 &lt; 17. <strong>Una giuria unanime su un cantante non può essere scalzata dal solo voto pubblico.</strong></p>
+
+    <div class="tip"><span class="wi">💡</span><div>Il sistema è calibrato per dare alla voce del pubblico un peso reale e significativo, senza però permetterle di annullare completamente il giudizio tecnico. È una scelta di design deliberata: premiare sia la qualità riconosciuta dai professionisti sia il consenso della serata.</div></div>
+
+    <hr>
+
+    <h4>Il Premio della Critica — perché è separato</h4>
+    <p>Il giudice critica esprime la sua valutazione in modo completamente indipendente. La sua classifica non entra nel calcolo Z-score né riceve il bonus pubblico. Viene annunciata separatamente come riconoscimento autonomo, per valorizzare una prospettiva artistica specifica che potrebbe divergere sia dalla giuria collegiale che dal pubblico. È la versione del festival del classico "Premio della Giuria" dei festival cinematografici.</p>
+  </div>
+
 </div>
 
 <!-- FOOTER -->
