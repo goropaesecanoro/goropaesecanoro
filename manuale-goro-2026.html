@@ -969,7 +969,7 @@ hr {
       <tr><td><strong style="color:#f08080">−2.0 o meno</strong></td><td>Molto sotto la media</td></tr>
     </table>
 
-    <div class="note"><span class="wi">ℹ️</span><div><strong>Nota tecnica:</strong> il sistema applica un "clip" a ±2.0: Z-score più estremi vengono riportati a ±2.0. Questo limita l'influenza di valutazioni eccezionalmente alte o basse di un singolo giudice, rendendo il sistema più robusto.</div></div>
+    <div class="note"><span class="wi">ℹ️</span><div><strong>Nota tecnica:</strong> per la giuria tecnica lo Z-score viene usato senza alcun troncamento — i valori estremi sono mantenuti intatti, perché esprimono un giudizio reale dei giudici. Un clip a ±2.0 viene invece applicato solo nella classifica Z-score del voto pubblico aggregato sulle tre serate (calcolo festival in Admin), dove serve limitare l'influenza di serate con pochissimi votanti.</div></div>
   </div>
 
   <!-- ── 9c ── -->
@@ -1094,7 +1094,7 @@ hr {
 <hr>
 <div style="text-align:center; color:var(--muted); font-size:13px; padding-top:8px">
   Goro Paese Canoro Festival — Seconda Edizione 2026<br>
-  Young Club Goro · <code>votagoro.top</code>
+  Young Club Goro · Roberto Gennari <code>votagoro.top</code>
 </div>
 
 </div><!-- /wrapper -->
