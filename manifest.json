@@ -7,7 +7,7 @@
   "theme_color": "#0D0D18",
   "icons": [
     {
-      "src": "img/locandina.png",
+      "src": "favicon.ico",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
