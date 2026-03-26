@@ -219,6 +219,16 @@
     </div>
   </div>
 
+  <!-- Overlay conferma panic SMS -->
+  <div class="overlay" id="overlay-panic-confirm" style="display:none">
+    <div class="overlay-box">
+      <h3 id="panic-confirm-title">Conferma</h3>
+      <p id="panic-confirm-body" style="font-size:13px;color:var(--muted);margin:10px 0 16px;line-height:1.6"></p>
+      <button class="btn-overlay-ok" id="panic-confirm-btn" onclick="executePanicSMS()">Conferma</button>
+      <button class="btn-overlay-cancel" onclick="closeOverlay('overlay-panic-confirm')">Annulla</button>
+    </div>
+  </div>
+
 </div><!-- /screen-admin -->
 
 
