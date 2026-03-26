@@ -1243,3 +1243,9 @@ window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
+
+// Aggancia pulsanti via addEventListener (più affidabile con ES modules)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-panic-sms')
+    ?.addEventListener('click', confirmPanicSMS);
+});
