@@ -284,8 +284,6 @@ async function confirmSerataChange() {
 // ══════════════════════════════════════════════
 //  SWITCH HANDLERS
 // ══════════════════════════════════════════════
-  updatePanicButton();
-}
 
 async function toggleVoto(checked) {
   await saveConfig({ votoAperto: checked });
