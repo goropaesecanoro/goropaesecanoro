@@ -794,7 +794,7 @@ async function showTop3Random() {
       document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
     } catch(e) { showToast('Calcola prima la classifica'); return; }
   }
-  const top3 = lastRanking.serataScores.slice(0,3)
+  const top3 = lastRanking.serataScores.slice(0,5)
     .map(c => c.name)
     .sort(() => Math.random() - 0.5);
 
