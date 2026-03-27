@@ -808,7 +808,7 @@ function startJuryRankingWatcher() {
           if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 critica per i conduttori';
         } else {
           if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
-          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
+          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 5 per i conduttori';
         }
         if (!_listenerFirstFire && !_hadRanking) {
           showToast('📊 Classifiche disponibili! Vedi sezione Classifica giuria tecnica', 180000);
@@ -896,7 +896,7 @@ async function adminShowTop3() {
   rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
 
   const isFinale = currentSerata === 3;
-  if (title) title.textContent = isFinale ? '🎤 Top 3 critica' : '🎤 Top 3 — ' + SERATA_LABELS[currentSerata];
+  if (title) title.textContent = isFinale ? '🎤 Top 3 critica' : '🎤 Top 5 — ' + SERATA_LABELS[currentSerata];
   if (subtitle) subtitle.textContent = isFinale
     ? 'I tre migliori della giuria critica — in ordine di classifica'
     : 'I tre nomi in ordine casuale per la rivelazione sul palco';
@@ -931,10 +931,10 @@ async function adminShowTop3() {
       const shuffled = snap.data().ranking.slice(0,5)
         .map(r => r.name || r.singer || '')
         .sort(() => Math.random() - 0.5);
-      const colors = ['#FFD700','#C0C0C0','#CD7F32'];
-      rows.innerHTML = shuffled.map((name, i) => `
-        <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid ${colors[i]}33;margin-bottom:12px">
-          <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:${colors[i]}">${name}</div>
+      //const colors = ['#FFD700','#C0C0C0','#CD7F32'];
+      rows.innerHTML = shuffled.map(name => `
+        <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid rgba(201,168,76,.25);margin-bottom:12px">
+          <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:var(--gold)">${name}</div>
         </div>`).join('');
     }
   } catch(e) {
