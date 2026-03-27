@@ -121,12 +121,16 @@
     </div>
   </div>
 
-  <!-- Gestione -->
+  <!-- ── 5. Gestione ── -->
   <div class="admin-section">
     <div class="admin-section-title">Gestione</div>
     <div class="admin-actions">
+      <button class="btn-secondary" id="btn-backup-json" onclick="exportBackupJSON()">💾 Scarica backup JSON serata</button>
       <button class="btn-secondary" onclick="window.location.href='admin.html'">🎛️ Vai al pannello Admin</button>
       <button class="btn-secondary" onclick="signOutNotaio()">← Esci</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;padding:0 2px">
+      Il backup JSON include voti pubblico, voti giuria e classifica calcolata per la serata corrente. Conservarlo come copia di sicurezza.
     </div>
   </div>
 
