@@ -724,7 +724,7 @@ async function computeFestivalRanking() {
 function openRankingOverlay(mode) {
   if (!lastRanking) return;
   const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
-  const rows = document.getElementById('ranking-rows');
+  const rows = document.getElementById('ranking-overlay-rows');
   if (!rows) return;
 
   if (mode === 'jury') {
