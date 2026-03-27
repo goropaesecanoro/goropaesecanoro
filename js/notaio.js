@@ -798,10 +798,10 @@ async function showTop3Random() {
     .map(c => c.name)
     .sort(() => Math.random() - 0.5);
 
-  const colors = ['#FFD700','#C0C0C0','#CD7F32'];
-  document.getElementById('top3-names').innerHTML = top3.map((name,i) => `
-    <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid ${colors[i]}33">
-      <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:${colors[i]}">${name}</div>
+  //const colors = ['#FFD700','#C0C0C0','#CD7F32'];
+  document.getElementById('top3-names').innerHTML = top3.map(name => `
+    <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid rgba(201,168,76,.25)">
+      <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:var(--gold)">${name}</div>
     </div>`).join('');
 
   openOverlay('overlay-top3');
