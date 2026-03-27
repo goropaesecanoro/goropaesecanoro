@@ -764,7 +764,7 @@ function showTop3Random() {
 
 function openFestivalOverlay() {
   if (!festivalRanking) return;
-  const rows = document.getElementById('festival-rows');
+  const rows = document.getElementById('festival-overlay-rows');
   if (!rows) return;
   rows.innerHTML = festivalRanking.map(r => `
     <div class="rank-row">
@@ -779,7 +779,7 @@ async function openCriticaOverlay() {
   try {
     const snap = await getDoc(doc(db,'jury_ranking','s3'));
     const criticRanking = snap.exists() ? (snap.data().criticRanking || []) : [];
-    const rows = document.getElementById('critica-rows');
+    const rows = document.getElementById('critica-overlay-rows');
     if (!rows) return;
     if (criticRanking.length === 0) {
       rows.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">Nessun giudice critica configurato</div>';
@@ -794,6 +794,68 @@ async function openCriticaOverlay() {
     openOverlay('overlay-critica');
   } catch(e) {
     showToast('Errore: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  BACKUP JSON — voti pubblico + giuria
+// ══════════════════════════════════════════════
+async function exportBackupJSON() {
+  const btn = document.getElementById('btn-backup-json');
+  if (btn) { btn.textContent = '⏳ Download in corso…'; btn.disabled = true; }
+  try {
+    // Voti pubblico
+    const publicSnap = await getDocs(collection(db, `votes_s${currentSerata}`));
+    const publicVotes = [];
+    publicSnap.forEach(d => publicVotes.push({ _docId: d.id, ...d.data() }));
+
+    // Voti giuria
+    const jurySnap = await getDoc(doc(db, 'jury_votes', `s${currentSerata}`));
+    const juryVotes = jurySnap.exists() ? jurySnap.data() : {};
+
+    // Giudici
+    const judgesSnap = await getDoc(doc(db, 'judges', `s${currentSerata}`));
+    const judgesData = judgesSnap.exists() ? judgesSnap.data() : {};
+
+    // Cantanti
+    const singersSnap = await getDoc(doc(db, 'singers', `s${currentSerata}`));
+    const singersData = singersSnap.exists() ? singersSnap.data() : {};
+
+    // Classifica calcolata (se presente)
+    const rankingSnap = await getDoc(doc(db, 'jury_ranking', `s${currentSerata}`));
+    const rankingData = rankingSnap.exists() ? rankingSnap.data() : null;
+
+    const backup = {
+      _meta: {
+        generatedAt:  new Date().toISOString(),
+        serata:       currentSerata,
+        serataLabel:  SERATA_LABELS[currentSerata],
+        publicVotes:  publicVotes.length,
+        juryJudges:   (judgesData.list || []).length,
+      },
+      singers:      singersData,
+      judges:       judgesData,
+      jury_votes:   juryVotes,
+      public_votes: publicVotes,
+      jury_ranking: rankingData,
+    };
+
+    const json     = JSON.stringify(backup, null, 2);
+    const blob     = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const url      = URL.createObjectURL(blob);
+    const ts       = new Date().toISOString().slice(0,16).replace('T','_').replace(':','h');
+    const filename = `backup_goro_s${currentSerata}_${ts}.json`;
+    const a        = document.createElement('a');
+    a.href         = url;
+    a.download     = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showToast(`✓ Backup scaricato: ${filename}`);
+  } catch(e) {
+    showToast('Errore backup: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '💾 Scarica backup JSON serata'; btn.disabled = false; }
   }
 }
 
@@ -882,3 +944,4 @@ window.openOverlay         = openOverlay;
 window.closeOverlay        = closeOverlay;
 window.signOutNotaio       = signOutNotaio;
 window.signInWithGoogle    = signInWithGoogle;
+window.exportBackupJSON    = exportBackupJSON;
