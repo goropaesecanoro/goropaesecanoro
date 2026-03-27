@@ -727,22 +727,49 @@ function openRankingOverlay(mode) {
   const rows = document.getElementById('ranking-overlay-rows');
   if (!rows) return;
 
+  // Aggiorna titolo overlay
+  const titleEl = document.getElementById('ranking-overlay-title');
+  const subEl   = document.getElementById('ranking-overlay-sub');
+  if (titleEl) titleEl.textContent = mode === 'jury' ? '🏅 Classifica giuria tecnica' : '📊 Classifica con bonus pubblico';
+  if (subEl)   subEl.textContent   = mode === 'jury'
+    ? 'Punteggi Z-score normalizzati — senza bonus pubblico'
+    : 'Punteggi Z-score + bonus voto pubblico';
+
   if (mode === 'jury') {
-    rows.innerHTML = serataScores.map(r => `
-      <div class="rank-row">
-        <div class="rank-pos">${r.rankLabel}</div>
-        <div class="rank-name">${r.name}${r.exAequo ? ' <span class="ex-aequo-badge">ex-aequo</span>' : ''}</div>
-        <div class="rank-score">${r.techScore.toFixed(1)}</div>
+    rows.innerHTML = `
+      <div class="n-ranking-head">
+        <span>#</span><span style="text-align:left">Cantante</span><span>Tec.</span><span></span><span>Tot.</span>
+      </div>` +
+      serataScores.map(r => `
+      <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
+        <div class="n-r-pos">${r.rankLabel}</div>
+        <div style="text-align:left;min-width:0">
+          <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+          ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+        </div>
+        <div class="n-r-score">${r.techScore.toFixed(1)}</div>
+        <div class="n-r-bonus">—</div>
+        <div class="n-r-total">${r.techScore.toFixed(1)}</div>
       </div>`).join('');
   } else {
-    rows.innerHTML = serataScores.map(r => `
-      <div class="rank-row">
-        <div class="rank-pos">${r.rankLabel}</div>
-        <div class="rank-name">${r.name}${r.exAequo ? ' <span class="ex-aequo-badge">ex-aequo</span>' : ''}</div>
-        <div class="rank-score">${r.total.toFixed(1)}</div>
+    rows.innerHTML = `
+      <div class="n-ranking-head">
+        <span>#</span><span style="text-align:left">Cantante</span><span>Tec.</span><span>+Pub.</span><span>Tot.</span>
+      </div>` +
+      serataScores.map(r => `
+      <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
+        <div class="n-r-pos">${r.rankLabel}</div>
+        <div style="text-align:left;min-width:0">
+          <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+          ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+        </div>
+        <div class="n-r-score">${r.techScore.toFixed(1)}</div>
+        <div class="n-r-bonus">+${r.bonus.toFixed(1)}</div>
+        <div class="n-r-total">${r.total.toFixed(1)}</div>
       </div>`).join('');
   }
 
+  // Statistiche giudici (se il div esiste nell'HTML)
   const statsEl = document.getElementById('ranking-judge-stats');
   if (statsEl) {
     statsEl.innerHTML = judgesWithVotes.map(jn => {
@@ -766,11 +793,18 @@ function openFestivalOverlay() {
   if (!festivalRanking) return;
   const rows = document.getElementById('festival-overlay-rows');
   if (!rows) return;
-  rows.innerHTML = festivalRanking.map(r => `
-    <div class="rank-row">
-      <div class="rank-pos">${r.rankLabel}</div>
-      <div class="rank-name">${r.name}${r.exAequo ? ' <span class="ex-aequo-badge">ex-aequo</span>' : ''}</div>
-      <div class="rank-score">${r.total.toFixed(1)}</div>
+  rows.innerHTML = `
+    <div class="n-ranking-head">
+      <span>#</span><span style="text-align:left">Cantante</span><span></span><span></span><span>Tot.</span>
+    </div>` +
+    festivalRanking.map(r => `
+    <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
+      <div class="n-r-pos">${r.rankLabel}</div>
+      <div style="text-align:left;min-width:0;grid-column:2/5">
+        <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+        ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+      </div>
+      <div class="n-r-total">${r.total.toFixed(1)}</div>
     </div>`).join('');
   openOverlay('overlay-festival');
 }
@@ -784,11 +818,18 @@ async function openCriticaOverlay() {
     if (criticRanking.length === 0) {
       rows.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">Nessun giudice critica configurato</div>';
     } else {
-      rows.innerHTML = criticRanking.map(r => `
-        <div class="rank-row">
-          <div class="rank-pos">${r.rankLabel}</div>
-          <div class="rank-name">${r.name}${r.exAequo ? ' <span class="ex-aequo-badge">ex-aequo</span>' : ''}</div>
-          <div class="rank-score">${r.techScore.toFixed(2)}</div>
+      rows.innerHTML = `
+        <div class="n-ranking-head">
+          <span>#</span><span style="text-align:left">Cantante</span><span></span><span></span><span>Z</span>
+        </div>` +
+        criticRanking.map(r => `
+        <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
+          <div class="n-r-pos">${r.rankLabel}</div>
+          <div style="text-align:left;min-width:0;grid-column:2/5">
+            <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+            ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+          </div>
+          <div class="n-r-total">${r.techScore.toFixed(2)}</div>
         </div>`).join('');
     }
     openOverlay('overlay-critica');
