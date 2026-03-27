@@ -18,6 +18,8 @@ let appConfig     = {};
 let singers       = { 1: [...DEFAULT_SINGERS[1]], 2: [...DEFAULT_SINGERS[2]] };
 let rankingInterval   = null; // auto-refresh classifica live
 let _unsubRights      = null; // listener revoca diritti
+let _unsubSingers1    = null; // listener real-time singers s1
+let _unsubSingers2    = null; // listener real-time singers s2
 
 // ══════════════════════════════════════════════
 //  INIT
@@ -60,6 +62,7 @@ export async function initAdminApp() {
     if (isSuperAdmin) initSuperAdmin();
     startRightsWatcher(user.uid);
     startJuryRankingWatcher();
+    startSingersWatcher();
     showScreen('screen-admin');
   });
 }
@@ -109,6 +112,32 @@ async function loadAllSingers() {
   } catch(e) {}
 }
 
+// ══════════════════════════════════════════════
+//  WATCHER REAL-TIME — singers
+//  Aggiorna singers[] in background.
+//  Non interviene se l'overlay cantanti è aperto
+//  per quella serata (editing in corso).
+// ══════════════════════════════════════════════
+function startSingersWatcher() {
+  if (_unsubSingers1) { _unsubSingers1(); _unsubSingers1 = null; }
+  if (_unsubSingers2) { _unsubSingers2(); _unsubSingers2 = null; }
+
+  const norm = list => (list || []).map(s => typeof s === 'string' ? { name: s, song: '' } : s);
+
+  _unsubSingers1 = onSnapshot(doc(db, 'singers', 's1'), snap => {
+    // Non aggiornare se l'overlay cantanti è aperto per questa serata
+    const overlayOpen = document.getElementById('overlay-singers')?.style.display !== 'none';
+    if (overlayOpen && window._editingSerata === 1) return;
+    if (snap.exists()) singers[1] = norm(snap.data().list);
+  }, () => {});
+
+  _unsubSingers2 = onSnapshot(doc(db, 'singers', 's2'), snap => {
+    const overlayOpen = document.getElementById('overlay-singers')?.style.display !== 'none';
+    if (overlayOpen && window._editingSerata === 2) return;
+    if (snap.exists()) singers[2] = norm(snap.data().list);
+  }, () => {});
+}
+
 async function saveSingers(serata) {
   const rows = document.querySelectorAll(`#singers-editor-s${serata} .singer-edit-row`);
   const list = Array.from(rows).map(row => ({
@@ -122,7 +151,6 @@ async function saveSingers(serata) {
   singers[serata] = list;
 
   // Riscrivi sempre s3 come concatenazione fresca s1+s2
-  // L'ordine di esibizione sarà gestito da "Ordina Serata Finale"
   if (serata === 1 || serata === 2) {
     try {
       const otherKey  = serata === 1 ? 's2' : 's1';
@@ -144,7 +172,6 @@ function renderSingersEditor(serata) {
   const container = document.getElementById(`singers-editor-s${serata}`);
   if (!container) return;
   const list = singers[serata];
-  // Normalizza: accetta sia stringhe che oggetti {name, song}
   const normalized = list.map(s => typeof s === 'string' ? {name:s, song:''} : s);
   container.innerHTML = normalized.map((s,i) => `
     <div class="singer-edit-row">
@@ -160,17 +187,13 @@ function renderSingersEditor(serata) {
 }
 
 // ══════════════════════════════════════════════
-//  RENDER PANNELLO
-// ══════════════════════════════════════════════
-
-// ══════════════════════════════════════════════
 //  WATCHER REVOCA DIRITTI IN TEMPO REALE
 // ══════════════════════════════════════════════
 function startRightsWatcher(uid) {
   if (_unsubRights) _unsubRights();
   let initialLoad = true;
   _unsubRights = onSnapshot(doc(db, 'admins', uid), snap => {
-    if (initialLoad) { initialLoad = false; return; } // ignora lo stato iniziale
+    if (initialLoad) { initialLoad = false; return; }
     if (!snap.exists()) {
       showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
       setTimeout(async () => {
@@ -180,7 +203,6 @@ function startRightsWatcher(uid) {
         window.location.reload();
       }, 2500);
     } else {
-      // Diritti concessi o aggiornati: ricarica per applicare i nuovi permessi
       showToast('✅ Permessi aggiornati. Ricaricamento…', 2000);
       setTimeout(() => window.location.reload(), 2000);
     }
@@ -202,26 +224,20 @@ function renderAdminPanel(user, isSuperAdmin = false) {
   updateSerataLabel();
   updateSwitches();
   refreshRanking();
-  // Avvia auto-refresh se votazioni già aperte
   updateRankingAutoRefresh(appConfig.votoAperto !== false);
 }
 
 function updateSerataLabel() {
-  // Reset auto-refresh sul cambio serata
   updateRankingAutoRefresh(appConfig.votoAperto !== false);
   const el = document.getElementById('current-serata-label');
   if (el) el.textContent = SERATA_LABELS[currentSerata];
-  // Mostra/nascondi tasto classifica finale Z-score
   const zBtn = document.getElementById('btn-zscore-wrap');
   if (zBtn) zBtn.style.display = currentSerata === 3 ? '' : 'none';
-  // Mostra/nascondi pulsante ordine finale
   const oBtn = document.getElementById('btn-ordine-finale');
   if (oBtn) oBtn.style.display = currentSerata === 3 ? '' : 'none';
 
   const is3 = currentSerata === 3;
-  // Serate 1-2: mostra top5 pubblico, nascondi svela e top5finale
   document.getElementById('toggle-top5-wrap')?.style.setProperty('display', is3 ? 'none' : '');
-  // Serata 3: mostra svela e top5finale, nascondi top5 pubblico
   document.getElementById('toggle-top5finale-wrap')?.style.setProperty('display', is3 ? '' : 'none');
   document.getElementById('toggle-svela-wrap')?.style.setProperty('display',      is3 ? '' : 'none');
 }
@@ -249,7 +265,6 @@ function setSwitchState(id, state) {
 let pendingSerata = null;
 
 function openSerataChooser() {
-  // Aggiorna bottoni nell'overlay
   [1,2,3].forEach(i =>
     document.getElementById(`ov-s${i}`)?.classList.toggle('active', i === currentSerata)
   );
@@ -276,7 +291,6 @@ async function confirmSerataChange() {
   updateSwitches();
   refreshRanking();
   showToast(`✓ ${SERATA_LABELS[currentSerata]} attivata`);
-  // Nascondi subito la sezione jury fino a verifica nuova serata
   const sec = document.getElementById('section-jury-ranking');
   if (sec) sec.style.display = 'none';
   if (window._juryListenerUpdate) window._juryListenerUpdate();
@@ -297,16 +311,13 @@ async function toggleVoto(checked) {
 }
 
 function updateRankingAutoRefresh(votoAperto) {
-  // Ferma sempre il timer esistente
   if (rankingInterval) { clearInterval(rankingInterval); rankingInterval = null; }
-  // Avvia solo se votazioni aperte
   if (votoAperto) {
-    rankingInterval = setInterval(() => refreshRanking(), 18000); // ogni 18 secondi
+    rankingInterval = setInterval(() => refreshRanking(), 18000);
   }
 }
 
 function blockIfVotoAperto(checkbox, prevValue) {
-  // Ripristina il checkbox al valore precedente e mostra toast
   setSwitchState(checkbox, prevValue);
   showToast('⚠️ Chiudi prima le votazioni', 3500);
 }
@@ -353,7 +364,6 @@ async function refreshRanking() {
   if (!rows) return;
   rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Caricamento…</div>';
   try {
-    // Carica voti e cantanti da Firestore direttamente — non dipende da singers in memoria
     const [votesSnap, s1Snap, s2Snap] = await Promise.all([
       getDocs(collection(db, `votes_s${currentSerata}`)),
       getDoc(doc(db,'singers','s1')),
@@ -406,8 +416,6 @@ async function refreshRanking() {
 // ══════════════════════════════════════════════
 //  CLASSIFICA FINALE Z-SCORE
 // ══════════════════════════════════════════════
-// Restituisce { nomeCantante: posizione } basata sui punteggi grezzi (1 = primo)
-// ── Helpers statistici ───────────────────────
 function getRawScores(votes, singerList) {
   const raw = {};
   singerList.forEach(s => raw[typeof s==='string'?s:s.name] = 0);
@@ -433,17 +441,13 @@ function calcZScores(raw) {
   return zMap;
 }
 
-// Clip Z-score a ±2.0 per limitare outlier
 const Z_CLIP = 2.0;
 function clip(z) { return Math.max(-Z_CLIP, Math.min(Z_CLIP, z)); }
 
-// Peso per affidabilità statistica: √(n_votanti / n_max)
-// Stima votanti da punteggio totale grezzo (max 5pt per votante)
 function estVoters(raw) {
   return Object.values(raw).reduce((a,b) => a+b, 0) / 5;
 }
 
-// ── Mostra classifica salvata — non ricalcola ──
 async function showFinalRanking() {
   openOverlay('overlay-final');
   const rows = document.getElementById('admin-final-rows');
@@ -461,7 +465,6 @@ async function showFinalRanking() {
   }
 }
 
-// ── Ricalcola da zero, salva, mostra ──
 async function computeAndShowFinalRanking() {
   openOverlay('overlay-final');
   const rows = document.getElementById('admin-final-rows');
@@ -479,22 +482,18 @@ async function computeAndShowFinalRanking() {
     snap2.forEach(d=>v2.push(d.data()));
     snap3.forEach(d=>v3.push(d.data()));
 
-    // Punteggi grezzi
     const raw1 = getRawScores(v1, singers[1]);
     const raw2 = getRawScores(v2, singers[2]);
     const raw3 = getRawScores(v3, [...singers[1], ...singers[2]]);
 
-    // Z-score per serata
     const z1 = calcZScores(raw1);
     const z2 = calcZScores(raw2);
     const z3 = calcZScores(raw3);
 
-    // Posizioni per punteggio grezzo
     const pos1 = getRankPositions(raw1);
     const pos2 = getRankPositions(raw2);
     const pos3 = getRankPositions(raw3);
 
-    // Pesi affidabilità: √(n_votanti / n_max)
     const n1 = estVoters(raw1);
     const n2 = estVoters(raw2);
     const n3 = estVoters(raw3);
@@ -503,37 +502,33 @@ async function computeAndShowFinalRanking() {
     const w2 = Math.sqrt(n2 / nMax);
     const w3 = Math.sqrt(n3 / nMax);
 
-    // Combina: clip + peso per ogni serata
     const allSingers = [...singers[1], ...singers[2]].map(s=>s.name);
     const combined = allSingers.map(name => {
-      const inS1    = singers[1].map(s=>s.name).includes(name);
-      const zs1     = inS1 ? clip(z1[name]||0) * w1 : null;
-      const zs2     = !inS1 ? clip(z2[name]||0) * w2 : null;
-      const zs3     = clip(z3[name]||0) * w3;
-      const zTot    = (zs1 ?? 0) + (zs2 ?? 0) + zs3;
+      const inS1 = singers[1].map(s=>s.name).includes(name);
+      const zs1  = inS1  ? clip(z1[name]||0) * w1 : null;
+      const zs2  = !inS1 ? clip(z2[name]||0) * w2 : null;
+      const zs3  = clip(z3[name]||0) * w3;
+      const zTot = (zs1 ?? 0) + (zs2 ?? 0) + zs3;
       return {
         name,
         zTot,
-        zs1, zs2, zs3,
         posSerata: inS1 ? pos1[name] : pos2[name],
         posFinale: pos3[name],
         serataNum: inS1 ? 1 : 2
       };
     }).sort((a,b) => b.zTot - a.zTot);
 
-    // Costruisci dati completi con posizioni serata
     const rankingData = combined.map(c => ({
-      name:    c.name,
-      zTot:    c.zTot,
-      posSerata:  c.posSerata,   // posizione in serata 1 o 2 (tra 7)
-      posFinale:  c.posFinale,   // posizione in serata 3 (tra 14)
-      serataNum:  singers[1].map(s=>s.name).includes(c.name) ? 1 : 2
+      name:      c.name,
+      zTot:      c.zTot,
+      posSerata: c.posSerata,
+      posFinale: c.posFinale,
+      serataNum: singers[1].map(s=>s.name).includes(c.name) ? 1 : 2
     }));
 
-    // Forza sovrascrittura su Firestore con merge:false (default setDoc)
     await setDoc(doc(db,'config','finalRanking'), {
-      ranking:     rankingData,
-      computedAt:  serverTimestamp()
+      ranking:    rankingData,
+      computedAt: serverTimestamp()
     });
 
     renderFinalRows(rows, rankingData);
@@ -545,7 +540,6 @@ async function computeAndShowFinalRanking() {
 
 function renderFinalRows(rows, ranking) {
   rows.innerHTML = '';
-  // Mappa nome→canzone da singers caricati
   const songMap = {};
   [...singers[1], ...singers[2]].forEach(s => { songMap[s.name] = s.song || ''; });
 
@@ -603,17 +597,14 @@ async function resetVotes() {
   } catch(e) { showToast('Errore durante il reset'); }
 }
 
-
 // ══════════════════════════════════════════════
-//  ORDINE SERATA FINALE — drag & drop
+//  ORDINE SERATA FINALE
 // ══════════════════════════════════════════════
-let _finalOrderList = []; // [{name, song, serataNum}]
+let _finalOrderList = [];
 
 async function openFinalOrderEditor() {
   const locked = await acquireLock('final_order');
   if (!locked) return;
-  // S3 è sempre aggiornato da saveSingers — lo leggiamo direttamente
-  // e aggiungiamo serataNum per visualizzazione (S1=primi 7, S2=secondi 7)
   const s3Snap = await getDoc(doc(db,'singers','s3'));
   const norm = l => (l||[]).map((s,i) => typeof s==='string'
     ? {name:s, song:'', serataNum:0}
@@ -648,15 +639,12 @@ function renderFinalOrderList() {
 
     row.addEventListener('click', () => {
       if (_selectedOrderIdx === null) {
-        // Prima selezione
         _selectedOrderIdx = i;
         renderFinalOrderList();
       } else if (_selectedOrderIdx === i) {
-        // Deseleziona
         _selectedOrderIdx = null;
         renderFinalOrderList();
       } else {
-        // Sposta: inserisci il selezionato nella posizione toccata
         const fromIdx = _selectedOrderIdx;
         const toIdx   = i;
         const moved   = _finalOrderList.splice(fromIdx, 1)[0];
@@ -677,20 +665,21 @@ async function saveFinalOrder() {
     releaseLock('final_order');
     showToast('✓ Ordine finale salvato');
     closeOverlay('overlay-order');
-    // Aggiorna singers in memoria
-    singers[1] = singers[1]; // invariato
-    singers[2] = singers[2]; // invariato
+    singers[1] = singers[1];
+    singers[2] = singers[2];
   } catch(e) {
     showToast('Errore nel salvataggio: ' + e.message);
   }
 }
 
 // ══════════════════════════════════════════════
-//  SIGN OUT — directo, poi reload
+//  SIGN OUT
 // ══════════════════════════════════════════════
 async function adminSignOut() {
   await releaseAllLocks().catch(() => {});
-  if (_unsubRights) { _unsubRights(); _unsubRights = null; }
+  if (_unsubRights)   { _unsubRights();   _unsubRights   = null; }
+  if (_unsubSingers1) { _unsubSingers1(); _unsubSingers1 = null; }
+  if (_unsubSingers2) { _unsubSingers2(); _unsubSingers2 = null; }
   const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
   await signOut(auth);
   window.location.reload();
@@ -699,7 +688,6 @@ async function adminSignOut() {
 // ══════════════════════════════════════════════
 //  OVERLAY HELPERS
 // ══════════════════════════════════════════════
-// Swipe sinistro o verso il basso sulla overlay-box = chiudi
 function attachSwipeClose(box, overlayId) {
   let startX = null, startY = null;
   const onStart = e => {
@@ -711,11 +699,9 @@ function attachSwipeClose(box, overlayId) {
     const t = e.changedTouches ? e.changedTouches[0] : e;
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
-    // Swipe sinistra→destra come Android back (dx > 60)
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
     startX = null; startY = null;
   };
-  // Rimuovi listener precedenti se già attaccati
   box._swipeStart && box.removeEventListener('touchstart', box._swipeStart);
   box._swipeEnd   && box.removeEventListener('touchend',   box._swipeEnd);
   box._swipeStart = onStart; box._swipeEnd = onEnd;
@@ -729,18 +715,16 @@ function openOverlay(id) {
   el.style.display = 'flex';
   const box = el.querySelector('.overlay-box');
   if (box) box.scrollTop = 0;
-  // Tap sul backdrop (fuori dalla box) = chiudi
   el._backdropHandler = e => { if (e.target === el) closeOverlay(id); };
   el.addEventListener('click', el._backdropHandler);
-  // Swipe sinistro sulla box = chiudi
   if (box) attachSwipeClose(box, id);
 }
+
 function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.style.display = 'none';
   if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
-  // Rilascia il lock associato all'overlay, qualunque sia il modo di uscita
   if (id === 'overlay-singers' && window._editingSerata) {
     releaseLock(`singers_s${window._editingSerata}`).catch(() => {});
   }
@@ -749,232 +733,6 @@ function closeOverlay(id) {
     _selectedOrderIdx = null;
   }
 }
-
-// ══════════════════════════════════════════════
-//  EXPOSE TO WINDOW
-// ══════════════════════════════════════════════
-
-// ══════════════════════════════════════════════
-//  SUPER-ADMIN — GESTIONE ACCESSI
-// ══════════════════════════════════════════════
-let allProfiles   = [];   // cache profili caricati
-let pendingAction = null; // { uid, role, action: 'assign'|'revoke' }
-
-async function initSuperAdmin() {
-  await refreshProfiles(false);
-}
-
-async function refreshProfiles(showFeedback = true) {
-  const btn = document.querySelector('#section-gestione-accessi .admin-section-title button');
-  if (btn) { btn.style.opacity = '.4'; btn.style.pointerEvents = 'none'; }
-  try {
-    const [profilesSnap, adminsSnap, notaiSnap] = await Promise.all([
-      getDocs(collection(db, 'user_profiles')),
-      getDocs(collection(db, 'admins')),
-      getDocs(collection(db, 'notai')),
-    ]);
-    const adminUids = new Set(adminsSnap.docs.map(d => d.id));
-    const notaiUids = new Set(notaiSnap.docs.map(d => d.id));
-    allProfiles = [];
-    profilesSnap.forEach(d => allProfiles.push({
-      uid:      d.id,
-      ...d.data(),
-      isAdmin:  adminUids.has(d.id),
-      isNotaio: notaiUids.has(d.id),
-    }));
-    if (showFeedback) {
-      showToast(`✓ ${allProfiles.length} profili caricati`);
-      // Aggiorna i risultati visibili se c'è una ricerca attiva
-      const q = document.getElementById('access-search')?.value || '';
-      if (q.length >= 2) searchUsers(q);
-    }
-  } catch(e) {
-    showToast('Errore caricamento profili utente');
-  } finally {
-    if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-  }
-}
-
-function searchUsers(q) {
-  const hint = document.getElementById('access-hint');
-  const res  = document.getElementById('access-results');
-  q = q.trim().toLowerCase();
-  if (q.length < 2) {
-    res.innerHTML = '';
-    hint.style.display = '';
-    return;
-  }
-  hint.style.display = 'none';
-
-  const matches = allProfiles.filter(p => {
-    const name  = (p.displayName || '').toLowerCase();
-    const email = (p.email || '').toLowerCase();
-    const phone = (p.phoneNumber || '').toLowerCase();
-    return name.includes(q) || email.includes(q) || phone.includes(q);
-  });
-
-  if (!matches.length) {
-    res.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center">Nessun utente trovato</p>';
-    return;
-  }
-
-  res.innerHTML = matches.map(p => {
-    const label    = p.displayName || p.phoneNumber || p.email || p.uid;
-    const sub      = p.displayName ? (p.email || p.phoneNumber || '') : '';
-    const isAdmin  = p.isAdmin  || false;
-    const isNotaio = p.isNotaio || false;
-    return `
-    <div class="access-card" data-uid="${p.uid}">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="s-name" style="font-size:14px">${label}</span>
-          ${isAdmin  ? '<span class="role-badge admin-badge">Admin</span>'  : ''}
-          ${isNotaio ? '<span class="role-badge notaio-badge">Notaio</span>' : ''}
-        </div>
-        ${sub ? `<div class="s-song" style="font-size:12px;margin-top:2px">${sub}</div>` : ''}
-        ${!p.displayName && p.phoneNumber ? `<button class="btn-edit-name" onclick="editProfileName('${p.uid}','${label}')">✏️ Aggiungi nome</button>` : ''}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
-        <button class="btn-role ${isAdmin ? 'btn-role-revoke' : 'btn-role-assign'}"
-          onclick="confirmRoleAction('${p.uid}','admin','${isAdmin ? 'revoke' : 'assign'}','${label}')">
-          ${isAdmin ? '✕ Admin' : '+ Admin'}
-        </button>
-        <button class="btn-role ${isNotaio ? 'btn-role-revoke' : 'btn-role-assign'}"
-          onclick="confirmRoleAction('${p.uid}','notaio','${isNotaio ? 'revoke' : 'assign'}','${label}')">
-          ${isNotaio ? '✕ Notaio' : '+ Notaio'}
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function confirmRoleAction(uid, role, action, label) {
-  pendingAction = { uid, role, action };
-  const roleLabel = role === 'admin' ? 'Admin' : 'Notaio';
-  document.getElementById('access-confirm-title').textContent =
-    action === 'assign' ? `Assegna ruolo ${roleLabel}` : `Revoca ruolo ${roleLabel}`;
-  let bodyText;
-  if (action === 'assign' && role === 'notaio')
-    bodyText = `Vuoi assegnare il ruolo Notaio a ${label}? Verrà assegnato anche il ruolo Admin automaticamente.`;
-  else if (action === 'revoke' && role === 'admin')
-    bodyText = `Vuoi revocare il ruolo Admin a ${label}? Verrà rimosso anche il ruolo Notaio se presente.`;
-  else if (action === 'assign')
-    bodyText = `Vuoi assegnare il ruolo ${roleLabel} a ${label}?`;
-  else
-    bodyText = `Vuoi revocare il ruolo ${roleLabel} a ${label}?`;
-  document.getElementById('access-confirm-body').textContent = bodyText;
-  const btn = document.getElementById('access-confirm-btn');
-  btn.textContent = action === 'assign' ? 'Sì, assegna' : 'Sì, revoca';
-  btn.style.background = action === 'revoke'
-    ? 'linear-gradient(135deg,#E85D5D,#a03030)' : '';
-  btn.style.color = action === 'revoke' ? '#fff' : '';
-  openOverlay('overlay-access-confirm');
-}
-
-async function executeRoleAction() {
-  if (!pendingAction) return;
-  closeOverlay('overlay-access-confirm');
-  const { uid, role, action } = pendingAction;
-  pendingAction = null;
-  try {
-    if (action === 'assign') {
-      await setDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid), { assignedAt: serverTimestamp() });
-      // Notaio implica sempre anche Admin
-      if (role === 'notaio') {
-        await setDoc(doc(db, 'admins', uid), { assignedAt: serverTimestamp() });
-      }
-    } else {
-      await deleteDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid));
-      // Revocare Admin rimuove anche Notaio automaticamente
-      if (role === 'admin') {
-        await deleteDoc(doc(db, 'notai', uid)).catch(() => {});
-      }
-    }
-    // Aggiorna cache locale
-    const p = allProfiles.find(x => x.uid === uid);
-    if (p) {
-      if (role === 'notaio') {
-        p.isNotaio = action === 'assign';
-        if (action === 'assign') p.isAdmin = true;
-      } else {
-        p.isAdmin = action === 'assign';
-        if (action === 'revoke') p.isNotaio = false;
-      }
-    }
-    showToast(action === 'assign' ? '✓ Ruolo assegnato' : '✓ Ruolo revocato');
-    searchUsers(document.getElementById('access-search').value);
-  } catch(e) {
-    showToast('Errore: ' + e.message);
-  }
-}
-
-// Modifica nome manuale per utenti con solo telefono
-function editProfileName(uid, currentLabel) {
-  const name = prompt(`Nome da associare a ${currentLabel}:`, '');
-  if (!name?.trim()) return;
-  setDoc(doc(db,'user_profiles',uid), { displayName: name.trim() }, { merge: true })
-    .then(() => {
-      const p = allProfiles.find(x => x.uid === uid);
-      if (p) p.displayName = name.trim();
-      showToast('✓ Nome salvato');
-      searchUsers(document.getElementById('access-search').value);
-    })
-    .catch(e => showToast('Errore: ' + e.message));
-}
-
-
-// ══════════════════════════════════════════════
-//  PANIC BUTTON — DISABILITA SMS
-// ══════════════════════════════════════════════
-function confirmPanicSMS() {
-  const smsOff = appConfig.smsDisabilitato === true;
-  document.getElementById('panic-confirm-title').textContent =
-    smsOff ? '⚠️ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
-  document.getElementById('panic-confirm-body').textContent =
-    smsOff
-      ? 'Vuoi riabilitare il login tramite numero di telefono? Gli utenti potranno nuovamente accedere via SMS.'
-      : 'Vuoi disabilitare il login tramite numero di telefono? Il pulsante SMS verrà rimosso dalla schermata di accesso e i codici non potranno più essere inviati. Usa solo in caso di emergenza budget.';
-  const btn = document.getElementById('panic-confirm-btn');
-  btn.textContent = smsOff ? 'Sì, riabilita SMS' : 'Sì, disabilita SMS';
-  btn.style.background = smsOff ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
-  btn.style.color = smsOff ? '' : '#fff';
-  openOverlay('overlay-panic-confirm');
-}
-
-async function executePanicSMS() {
-  closeOverlay('overlay-panic-confirm');
-  const smsOff = appConfig.smsDisabilitato === true;
-  await saveConfig({ smsDisabilitato: !smsOff });
-  updatePanicButton();
-  showToast(smsOff ? '✅ Accesso SMS riabilitato' : '🚨 Accesso SMS disabilitato');
-}
-
-function updatePanicButton() {
-  const btn = document.getElementById('btn-panic-sms');
-  if (!btn) return;
-  const smsOff = appConfig.smsDisabilitato === true;
-  btn.textContent = smsOff ? '✅ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
-  btn.style.background = smsOff
-    ? 'linear-gradient(135deg,var(--green),#2d7a4f)'
-    : 'linear-gradient(135deg,#E85D5D,#a03030)';
-}
-
-window.openSerataChooser      = openSerataChooser;
-window.selectPendingSerata    = selectPendingSerata;
-window.confirmSerataChange    = confirmSerataChange;
-window.closeOverlay           = closeOverlay;
-window.toggleVoto             = e => toggleVoto(e.target.checked);
-window.toggleTop5             = e => toggleTop5(e.target.checked);
-window.toggleTop5Finale       = e => toggleTop5Finale(e.target.checked);
-window.toggleSvela            = e => toggleSvela(e.target.checked);
-window.refreshRanking         = refreshRanking;
-window.showFinalRanking           = showFinalRanking;
-window.computeAndShowFinalRanking = computeAndShowFinalRanking;
-window.exportCSV              = exportCSV;
-window.confirmReset           = () => openOverlay('overlay-reset');
-window.resetVotes             = resetVotes;
-window.confirmPanicSMS        = confirmPanicSMS;
-window.executePanicSMS        = executePanicSMS;
 
 // ══════════════════════════════════════════════
 //  LOCK EDITOR CONCORRENTE
@@ -1024,7 +782,6 @@ async function forceUnlockAll() {
   } catch(e) { showToast('Errore: ' + e.message); }
 }
 
-
 // ══════════════════════════════════════════════
 //  CLASSIFICA TECNICA IN ADMIN — listener + render
 // ══════════════════════════════════════════════
@@ -1032,38 +789,12 @@ let _unsubJuryRanking = null;
 
 function startJuryRankingWatcher() {
   if (_unsubJuryRanking) return;
-  // Ascolta sia la serata corrente che il festival
-  const checkAndShow = async () => {
-    const serata = currentSerata;
-    const key    = serata === 3 ? 'festival' : `s${serata}`;
-    try {
-      const snap = await getDoc(doc(db,'jury_ranking', key));
-      const sec  = document.getElementById('section-jury-ranking');
-      if (!sec) return;
-      if (snap.exists() && snap.data().ranking?.length) {
-        sec.style.display = '';
-        // Aggiorna label pulsanti in base alla serata
-        const btnFull = document.getElementById('btn-admin-jury-full');
-        const btnTop3 = document.getElementById('btn-admin-top3');
-        if (serata === 3) {
-          if (btnFull) btnFull.textContent = '🏆 Mostra classifica definitiva (tecnica + pubblico)';
-          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 critica per i conduttori';
-        } else {
-          if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
-          if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
-        }
-      } else {
-        sec.style.display = 'none';
-      }
-    } catch(e) {}
-  };
 
-  // Snapshot live su jury_ranking per la serata corrente
   const updateListener = () => {
     if (_unsubJuryRanking) { _unsubJuryRanking(); _unsubJuryRanking = null; }
     const key = currentSerata === 3 ? 'festival' : `s${currentSerata}`;
-    let _listenerFirstFire = true; // primo scatto = stato attuale, non una novità
-    let _hadRanking = false;       // classifica era già presente al momento dell'attach
+    let _listenerFirstFire = true;
+    let _hadRanking = false;
     _unsubJuryRanking = onSnapshot(doc(db,'jury_ranking', key), snap => {
       const sec = document.getElementById('section-jury-ranking');
       if (!sec) return;
@@ -1079,7 +810,6 @@ function startJuryRankingWatcher() {
           if (btnFull) btnFull.textContent = '📊 Mostra classifica tecnica + bonus pubblico';
           if (btnTop3) btnTop3.textContent = '🎤 Mostra top 3 per i conduttori';
         }
-        // Toast solo se la classifica è APPENA comparsa (non c'era al caricamento)
         if (!_listenerFirstFire && !_hadRanking) {
           showToast('📊 Classifiche disponibili! Vedi sezione Classifica giuria tecnica', 180000);
         }
@@ -1093,11 +823,10 @@ function startJuryRankingWatcher() {
   };
 
   updateListener();
-  // Quando cambia serata, rinnova il listener
   window._juryListenerUpdate = updateListener;
 }
 
-// ── Ranking olimpico per admin (ex-aequo con posizione condivisa) ──
+// ── Ranking olimpico per admin ──
 function assignOlympicRanksAdmin(sorted) {
   const medals = ['🥇','🥈','🥉'];
   let pos = 1;
@@ -1173,10 +902,7 @@ async function adminShowTop3() {
     : 'I tre nomi in ordine casuale per la rivelazione sul palco';
 
   try {
-    let top3names;
-
     if (isFinale) {
-      // Serata 3: usa criticRanking da jury_ranking/festival, in ordine corretto
       const snap = await getDoc(doc(db,'jury_ranking','festival'));
       if (!snap.exists()) {
         rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica festival non ancora calcolata.</div>';
@@ -1188,8 +914,6 @@ async function adminShowTop3() {
         rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica critica non disponibile.</div>';
         return;
       }
-      top3names = source.slice(0,3).map(r => r.name || r.singer || '');
-      // Ordine corretto con medaglie
       const ranked3 = assignOlympicRanksAdmin(source.slice(0,3));
       const medalEmoji = ['🥇','🥈','🥉'];
       rows.innerHTML = ranked3.map((r, i) => `
@@ -1199,7 +923,6 @@ async function adminShowTop3() {
           ${r.exAequo ? `<div class="ex-aequo-badge" style="margin:4px auto 0;display:inline-block">ex-aequo</div>` : ''}
         </div>`).join('');
     } else {
-      // Serate 1/2: shuffle come in notaio — i nomi appaiono in ordine casuale senza medaglie
       const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
       if (!snap.exists() || !snap.data().ranking?.length) {
         rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata.</div>';
@@ -1219,6 +942,9 @@ async function adminShowTop3() {
   }
 }
 
+// ══════════════════════════════════════════════
+//  EXPOSE TO WINDOW
+// ══════════════════════════════════════════════
 window.saveSingersAdmin       = saveSingers;
 window.openSingersEditor = async (s) => {
   window._editingSerata = s;
@@ -1236,16 +962,220 @@ window.signOutAdmin           = adminSignOut;
 window.searchUsers            = searchUsers;
 window.refreshProfiles        = refreshProfiles;
 window.forceUnlockAll         = forceUnlockAll;
-window.adminShowJuryRanking    = adminShowJuryRanking;
-window.adminShowTop3           = adminShowTop3;
+window.adminShowJuryRanking   = adminShowJuryRanking;
+window.adminShowTop3          = adminShowTop3;
 window.confirmRoleAction      = confirmRoleAction;
 window.executeRoleAction      = executeRoleAction;
 window.editProfileName        = editProfileName;
 window.openFinalOrderEditor   = openFinalOrderEditor;
 window.saveFinalOrder         = saveFinalOrder;
+window.openSerataChooser      = openSerataChooser;
+window.selectPendingSerata    = selectPendingSerata;
+window.confirmSerataChange    = confirmSerataChange;
+window.closeOverlay           = closeOverlay;
+window.toggleVoto             = e => toggleVoto(e.target.checked);
+window.toggleTop5             = e => toggleTop5(e.target.checked);
+window.toggleTop5Finale       = e => toggleTop5Finale(e.target.checked);
+window.toggleSvela            = e => toggleSvela(e.target.checked);
+window.refreshRanking         = refreshRanking;
+window.showFinalRanking           = showFinalRanking;
+window.computeAndShowFinalRanking = computeAndShowFinalRanking;
+window.exportCSV              = exportCSV;
+window.confirmReset           = () => openOverlay('overlay-reset');
+window.resetVotes             = resetVotes;
+window.confirmPanicSMS        = confirmPanicSMS;
+window.executePanicSMS        = executePanicSMS;
 
-// Aggancia pulsanti via addEventListener (più affidabile con ES modules)
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-panic-sms')
     ?.addEventListener('click', confirmPanicSMS);
 });
+
+// ══════════════════════════════════════════════
+//  SUPER-ADMIN — GESTIONE ACCESSI
+// ══════════════════════════════════════════════
+let allProfiles   = [];
+let pendingAction = null;
+
+async function initSuperAdmin() {
+  await refreshProfiles(false);
+}
+
+async function refreshProfiles(showFeedback = true) {
+  const btn = document.querySelector('#section-gestione-accessi .admin-section-title button');
+  if (btn) { btn.style.opacity = '.4'; btn.style.pointerEvents = 'none'; }
+  try {
+    const [profilesSnap, adminsSnap, notaiSnap] = await Promise.all([
+      getDocs(collection(db, 'user_profiles')),
+      getDocs(collection(db, 'admins')),
+      getDocs(collection(db, 'notai')),
+    ]);
+    const adminUids = new Set(adminsSnap.docs.map(d => d.id));
+    const notaiUids = new Set(notaiSnap.docs.map(d => d.id));
+    allProfiles = [];
+    profilesSnap.forEach(d => allProfiles.push({
+      uid:      d.id,
+      ...d.data(),
+      isAdmin:  adminUids.has(d.id),
+      isNotaio: notaiUids.has(d.id),
+    }));
+    if (showFeedback) {
+      showToast(`✓ ${allProfiles.length} profili caricati`);
+      const q = document.getElementById('access-search')?.value || '';
+      if (q.length >= 2) searchUsers(q);
+    }
+  } catch(e) {
+    showToast('Errore caricamento profili utente');
+  } finally {
+    if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+  }
+}
+
+function searchUsers(q) {
+  const hint = document.getElementById('access-hint');
+  const res  = document.getElementById('access-results');
+  q = q.trim().toLowerCase();
+  if (q.length < 2) {
+    res.innerHTML = '';
+    hint.style.display = '';
+    return;
+  }
+  hint.style.display = 'none';
+
+  const matches = allProfiles.filter(p => {
+    const name  = (p.displayName || '').toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const phone = (p.phoneNumber || '').toLowerCase();
+    return name.includes(q) || email.includes(q) || phone.includes(q);
+  });
+
+  if (!matches.length) {
+    res.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center">Nessun utente trovato</p>';
+    return;
+  }
+
+  res.innerHTML = matches.map(p => {
+    const label    = p.displayName || p.phoneNumber || p.email || p.uid;
+    const sub      = p.displayName ? (p.email || p.phoneNumber || '') : '';
+    const isAdmin  = p.isAdmin  || false;
+    const isNotaio = p.isNotaio || false;
+    return `
+    <div class="access-card" data-uid="${p.uid}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="s-name" style="font-size:14px">${label}</span>
+          ${isAdmin  ? '<span class="role-badge admin-badge">Admin</span>'  : ''}
+          ${isNotaio ? '<span class="role-badge notaio-badge">Notaio</span>' : ''}
+        </div>
+        ${sub ? `<div class="s-song" style="font-size:12px;margin-top:2px">${sub}</div>` : ''}
+        ${!p.displayName && p.phoneNumber ? `<button class="btn-edit-name" onclick="editProfileName('${p.uid}','${label}')">✏️ Aggiungi nome</button>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
+        <button class="btn-role ${isAdmin ? 'btn-role-revoke' : 'btn-role-assign'}"
+          onclick="confirmRoleAction('${p.uid}','admin','${isAdmin ? 'revoke' : 'assign'}','${label}')">
+          ${isAdmin ? '✕ Admin' : '+ Admin'}
+        </button>
+        <button class="btn-role ${isNotaio ? 'btn-role-revoke' : 'btn-role-assign'}"
+          onclick="confirmRoleAction('${p.uid}','notaio','${isNotaio ? 'revoke' : 'assign'}','${label}')">
+          ${isNotaio ? '✕ Notaio' : '+ Notaio'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function confirmRoleAction(uid, role, action, label) {
+  pendingAction = { uid, role, action };
+  const roleLabel = role === 'admin' ? 'Admin' : 'Notaio';
+  const actionLabel = action === 'assign' ? 'assegnare' : 'revocare';
+  document.getElementById('role-confirm-body').textContent =
+    `Vuoi ${actionLabel} il ruolo ${roleLabel} a ${label}?`;
+  const btn = document.getElementById('role-confirm-btn');
+  btn.textContent = action === 'assign' ? '✓ Assegna' : '✕ Revoca';
+  btn.style.background = action === 'assign' ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
+  btn.style.color = action === 'assign' ? '' : '#fff';
+  openOverlay('overlay-role-confirm');
+}
+
+async function executeRoleAction() {
+  closeOverlay('overlay-role-confirm');
+  if (!pendingAction) return;
+  const { uid, role, action } = pendingAction;
+  pendingAction = null;
+  try {
+    if (action === 'assign') {
+      await setDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid), { assignedAt: serverTimestamp() });
+      if (role === 'notaio') {
+        await setDoc(doc(db, 'admins', uid), { assignedAt: serverTimestamp() });
+      }
+    } else {
+      await deleteDoc(doc(db, role === 'notaio' ? 'notai' : 'admins', uid));
+      if (role === 'admin') {
+        await deleteDoc(doc(db, 'notai', uid)).catch(() => {});
+      }
+    }
+    const p = allProfiles.find(x => x.uid === uid);
+    if (p) {
+      if (role === 'notaio') {
+        p.isNotaio = action === 'assign';
+        if (action === 'assign') p.isAdmin = true;
+      } else {
+        p.isAdmin = action === 'assign';
+        if (action === 'revoke') p.isNotaio = false;
+      }
+    }
+    showToast(action === 'assign' ? '✓ Ruolo assegnato' : '✓ Ruolo revocato');
+    searchUsers(document.getElementById('access-search').value);
+  } catch(e) {
+    showToast('Errore: ' + e.message);
+  }
+}
+
+function editProfileName(uid, currentLabel) {
+  const name = prompt(`Nome da associare a ${currentLabel}:`, '');
+  if (!name?.trim()) return;
+  setDoc(doc(db,'user_profiles',uid), { displayName: name.trim() }, { merge: true })
+    .then(() => {
+      const p = allProfiles.find(x => x.uid === uid);
+      if (p) p.displayName = name.trim();
+      showToast('✓ Nome salvato');
+      searchUsers(document.getElementById('access-search').value);
+    })
+    .catch(e => showToast('Errore: ' + e.message));
+}
+
+// ══════════════════════════════════════════════
+//  PANIC BUTTON — DISABILITA SMS
+// ══════════════════════════════════════════════
+function confirmPanicSMS() {
+  const smsOff = appConfig.smsDisabilitato === true;
+  document.getElementById('panic-confirm-title').textContent =
+    smsOff ? '⚠️ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  document.getElementById('panic-confirm-body').textContent =
+    smsOff
+      ? 'Vuoi riabilitare il login tramite numero di telefono? Gli utenti potranno nuovamente accedere via SMS.'
+      : 'Vuoi disabilitare il login tramite numero di telefono? Il pulsante SMS verrà rimosso dalla schermata di accesso e i codici non potranno più essere inviati. Usa solo in caso di emergenza budget.';
+  const btn = document.getElementById('panic-confirm-btn');
+  btn.textContent = smsOff ? 'Sì, riabilita SMS' : 'Sì, disabilita SMS';
+  btn.style.background = smsOff ? '' : 'linear-gradient(135deg,#E85D5D,#a03030)';
+  btn.style.color = smsOff ? '' : '#fff';
+  openOverlay('overlay-panic-confirm');
+}
+
+async function executePanicSMS() {
+  closeOverlay('overlay-panic-confirm');
+  const smsOff = appConfig.smsDisabilitato === true;
+  await saveConfig({ smsDisabilitato: !smsOff });
+  updatePanicButton();
+  showToast(smsOff ? '✅ Accesso SMS riabilitato' : '🚨 Accesso SMS disabilitato');
+}
+
+function updatePanicButton() {
+  const btn = document.getElementById('btn-panic-sms');
+  if (!btn) return;
+  const smsOff = appConfig.smsDisabilitato === true;
+  btn.textContent = smsOff ? '✅ Riabilita accesso SMS' : '🚨 Disabilita accesso SMS';
+  btn.style.background = smsOff
+    ? 'linear-gradient(135deg,var(--green),#2d7a4f)'
+    : 'linear-gradient(135deg,#E85D5D,#a03030)';
+}
