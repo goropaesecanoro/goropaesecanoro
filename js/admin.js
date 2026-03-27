@@ -928,7 +928,7 @@ async function adminShowTop3() {
         rows.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Classifica non ancora calcolata.</div>';
         return;
       }
-      const shuffled = snap.data().ranking.slice(0,3)
+      const shuffled = snap.data().ranking.slice(0,5)
         .map(r => r.name || r.singer || '')
         .sort(() => Math.random() - 0.5);
       const colors = ['#FFD700','#C0C0C0','#CD7F32'];
