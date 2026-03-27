@@ -17,7 +17,7 @@ let _unsubVotes    = null; // listener real-time jury_votes
 let _unsubSingers  = null; // listener real-time singers
 let singers        = [];   // [{name, song}] della serata corrente
 let judges         = [];   // [{name, isCritic}]
-let draftVotes     = {};   // {judgeName: {singerName: {int, int2}}}
+let draftVotes     = {};   // {judgeName: {singerName: {int, int}}}
 let lastRanking    = null; // risultato ultimo calcolo serata
 let festivalRanking = null;
 
@@ -28,7 +28,7 @@ function startNotaioRightsWatcher(uid) {
   if (_unsubRights) _unsubRights();
   let initialLoad = true;
   _unsubRights = onSnapshot(doc(db, 'notai', uid), snap => {
-    if (initialLoad) { initialLoad = false; return; }
+    if (initialLoad) { initialLoad = false; return; } // ignora lo stato iniziale
     if (!snap.exists()) {
       showToast('⚠️ Accesso revocato. Disconnessione in corso…', 3000);
       setTimeout(async () => {
@@ -37,6 +37,7 @@ function startNotaioRightsWatcher(uid) {
         showScreen('screen-notaio-login');
       }, 2500);
     } else {
+      // Diritti concessi o aggiornati: ricarica per applicare i nuovi permessi
       showToast('✅ Permessi aggiornati. Ricaricamento…', 2000);
       setTimeout(() => window.location.reload(), 2000);
     }
@@ -45,57 +46,45 @@ function startNotaioRightsWatcher(uid) {
 
 // ══════════════════════════════════════════════
 //  WATCHER REAL-TIME — jury_votes
-//  Aggiorna draftVotes in background, ma SOLO per
-//  giudici diversi da quello in editing attivo.
+//  Aggiorna draftVotes in background solo per
+//  i giudici diversi da quello in editing.
 // ══════════════════════════════════════════════
 function startVotesWatcher() {
   if (_unsubVotes) _unsubVotes();
   _unsubVotes = onSnapshot(doc(db, 'jury_votes', `s${currentSerata}`), snap => {
     if (!snap.exists()) return;
     const remoteVotes = snap.data().votes || {};
-    // Aggiorna solo i giudici non in editing
     let updated = false;
     Object.keys(remoteVotes).forEach(judgeName => {
-      if (judgeName === selectedJudge) return; // non toccare il giudice in editing
+      if (judgeName === selectedJudge) return;
       draftVotes[judgeName] = remoteVotes[judgeName];
       updated = true;
     });
-    // Rimuovi giudici cancellati da remoto (solo se non in editing)
     Object.keys(draftVotes).forEach(judgeName => {
       if (judgeName === selectedJudge) return;
-      if (!remoteVotes[judgeName]) {
-        delete draftVotes[judgeName];
-        updated = true;
-      }
+      if (!remoteVotes[judgeName]) { delete draftVotes[judgeName]; updated = true; }
     });
-    if (updated) renderJudgesPreview(); // aggiorna i pallini silenziosamente
+    if (updated) renderJudgesPreview();
   }, () => {});
 }
 
 // ══════════════════════════════════════════════
 //  WATCHER REAL-TIME — singers
-//  Aggiorna la lista cantanti solo se non c'è
-//  un giudice in editing attivo.
+//  Aggiorna la lista solo se nessun giudice
+//  è in editing attivo.
 // ══════════════════════════════════════════════
 function startSingersWatcher() {
   if (_unsubSingers) _unsubSingers();
   const norm = list => (list || []).map(s => typeof s === 'string' ? { name: s, song: '' } : s);
-
   if (currentSerata === 3) {
-    // Serata 3: ascolta s3 (ordine finale) con fallback s1+s2
     _unsubSingers = onSnapshot(doc(db, 'singers', 's3'), snap => {
-      if (selectedJudge) return; // non aggiornare mentre si sta editando
-      if (snap.exists() && snap.data().list?.length > 0) {
-        singers = norm(snap.data().list);
-      }
-      // Se s3 vuoto non facciamo nulla: i dati iniziali sono già corretti
+      if (selectedJudge) return;
+      if (snap.exists() && snap.data().list?.length > 0) singers = norm(snap.data().list);
     }, () => {});
   } else {
     _unsubSingers = onSnapshot(doc(db, 'singers', `s${currentSerata}`), snap => {
-      if (selectedJudge) return; // non aggiornare mentre si sta editando
-      if (snap.exists()) {
-        singers = norm(snap.data().list);
-      }
+      if (selectedJudge) return;
+      if (snap.exists()) singers = norm(snap.data().list);
     }, () => {});
   }
 }
@@ -121,7 +110,7 @@ async function acquireJudgeLock(serata, judgeName) {
       lockedAt:  now,
       expiresAt: now + LOCK_TTL_MS,
     });
-    _activeLockKey = key;
+    _activeLockKey = key; // salva chiave esatta per il release
     return true;
   } catch(e) { return true; }
 }
@@ -144,6 +133,7 @@ auth.onAuthStateChanged(async user => {
     showScreen('screen-notaio-login');
     return;
   }
+  // Verifica accesso notaio
   const snap = await getDoc(doc(db, 'notai', user.uid));
   if (!snap.exists()) {
     document.getElementById('screen-loading').innerHTML =
@@ -168,6 +158,7 @@ async function initNotaio() {
   document.getElementById('notaio-user-initials').textContent = init;
   document.getElementById('notaio-user-name').textContent     = name.split(' ')[0];
 
+  // Carica config serata
   try {
     const cfg = await getDoc(doc(db,'config','current'));
     currentSerata = cfg.exists() ? (cfg.data().serata || 1) : 1;
@@ -175,6 +166,7 @@ async function initNotaio() {
 
   document.getElementById('notaio-serata-label').textContent = SERATA_LABELS[currentSerata];
 
+  // Mostra sezione festival solo in serata 3
   document.getElementById('festival-ranking-section').style.display =
     currentSerata === 3 ? '' : 'none';
 
@@ -183,7 +175,7 @@ async function initNotaio() {
   await loadJudges();
   await checkExistingRanking();
 
-  // Avvia i watcher real-time DOPO il caricamento iniziale
+  // Avvia watcher real-time dopo il caricamento iniziale
   startVotesWatcher();
   startSingersWatcher();
 
@@ -192,6 +184,7 @@ async function initNotaio() {
 
 async function checkExistingRanking() {
   try {
+    // Serata corrente
     const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
     if (snap.exists() && snap.data().ranking?.length > 0) {
       const data = snap.data();
@@ -205,6 +198,7 @@ async function checkExistingRanking() {
       document.getElementById('btn-show-ranking').style.display = '';
       document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
     }
+    // Festival (solo serata 3)
     if (currentSerata === 3) {
       const fsnap = await getDoc(doc(db,'jury_ranking','festival'));
       if (fsnap.exists() && fsnap.data().ranking?.length > 0) {
@@ -260,7 +254,7 @@ async function loadJudges() {
 }
 
 let selectedJudge   = '';
-let _activeLockKey  = null;
+let _activeLockKey  = null; // chiave esatta del lock acquisito
 
 function renderJudgesPreview() {
   const el = document.getElementById('judges-list-preview');
@@ -268,6 +262,7 @@ function renderJudgesPreview() {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px">Nessun giudice configurato — usa ✎ Modifica</div>';
     return;
   }
+  // Normale prima, critica in fondo
   const normal = judges.filter(j => !j.isCritic);
   const critic = judges.filter(j => j.isCritic);
   const ordered = [...normal, ...critic];
@@ -278,7 +273,7 @@ function renderJudgesPreview() {
     const total  = singers.length;
     const done   = filled === total && total > 0;
     const sel    = selectedJudge === j.name;
-    const name   = j.name.replace(/'/g, "\\'");
+    const name   = j.name.replace(/'/g, "\'");
     return `<div class="judge-select-row ${done?'done':''} ${sel?'selected':''} ${j.isCritic?'critic-row':''}"
       onclick="selectJudge('${name}')">
       <span class="judge-select-dot ${done?'done':''}"></span>
@@ -289,6 +284,7 @@ function renderJudgesPreview() {
   }).join('');
 }
 
+// Mantieni il select nascosto per compatibilità interna, aggiornalo in sync
 function syncHiddenSelector(judgeName) {
   const sel = document.getElementById('judge-selector');
   sel.value = judgeName;
@@ -306,6 +302,7 @@ function renderJudgesCompletion() {
 }
 
 async function selectJudge(judgeName) {
+  // Secondo tap sullo stesso giudice — chiudi e rilascia lock
   if (selectedJudge === judgeName) {
     await releaseJudgeLock(currentSerata, selectedJudge);
     selectedJudge  = '';
@@ -318,7 +315,9 @@ async function selectJudge(judgeName) {
     if (actions) actions.style.display = 'none';
     return;
   }
+  // Rilascia eventuale lock precedente
   if (selectedJudge) await releaseJudgeLock(currentSerata, selectedJudge);
+  // Acquisisci lock sul nuovo giudice
   const locked = await acquireJudgeLock(currentSerata, judgeName);
   if (!locked) return;
   selectedJudge = judgeName;
@@ -352,7 +351,9 @@ function addJudgeRow(name='', isCritic=false) {
 
 function toggleCriticBtn(btn) {
   const wasActive = btn.classList.contains('active');
+  // Rimuovi da tutti
   document.querySelectorAll('.critic-toggle').forEach(b => b.classList.remove('active'));
+  // Toggle: se era attivo lo disattiva, altrimenti attiva questo
   if (!wasActive) btn.classList.add('active');
 }
 
@@ -365,6 +366,7 @@ async function saveJudges() {
 
   if (list.length === 0) { showToast('Inserisci almeno un giudice'); return; }
 
+  // Garantisce al massimo un critico
   const critics = list.filter(j => j.isCritic);
   if (critics.length > 1) {
     list.forEach(j => j.isCritic = false);
@@ -444,10 +446,12 @@ function renderVotesGrid(judgeName) {
 }
 
 function onScoreInput(input) {
+  // Rimuovi qualsiasi carattere non numerico
   input.value = input.value.replace(/[^0-9]/g, '');
 
   let val = parseInt(input.value);
   if (isNaN(val) || input.value === '') {
+    // Valore vuoto — pulisci dal draft ma non bloccare l'input
     const judgeName = selectedJudge || document.getElementById('judge-selector').value;
     const singer = input.dataset.singer;
     const field  = input.dataset.field;
@@ -455,7 +459,10 @@ function onScoreInput(input) {
     renderJudgesPreview();
     return;
   }
+  // Clamp solo se > 10 (non clampare mentre si sta digitando "1" per poi scrivere "10")
   if (val > 10) { input.value = '10'; val = 10; }
+  // Non correggere a 1 subito — l'utente potrebbe stare ancora digitando
+  // Il clamp a min viene fatto al salvataggio e al blur
   const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   const singer    = input.dataset.singer;
   const field     = input.dataset.field;
@@ -464,6 +471,7 @@ function onScoreInput(input) {
   if (!draftVotes[judgeName][singer]) draftVotes[judgeName][singer] = {int:0, int2:0};
   draftVotes[judgeName][singer][field] = val;
 
+  // Highlight riga completata
   const row = input.closest('.votes-grid-row');
   const v   = draftVotes[judgeName][singer];
   row?.classList.toggle('complete', v.int > 0 && v.int2 > 0);
@@ -489,12 +497,15 @@ async function clearJudgeVotes() {
   const judgeName = selectedJudge;
   if (!judgeName) return;
   closeOverlay('overlay-clear-votes');
+  // Cancella dal draft locale
   delete draftVotes[judgeName];
+  // Salva su Firestore
   try {
     await setDoc(doc(db,'jury_votes',`s${currentSerata}`), {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
+    // Cancella TUTTA la classifica (serata + festival) per forzare ricalcolo
     await Promise.all([
       deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{}),
       deleteDoc(doc(db,'jury_ranking','festival')).catch(()=>{}),
@@ -511,6 +522,7 @@ async function saveJudgeVotes() {
   const judgeName = selectedJudge || document.getElementById('judge-selector').value;
   if (!judgeName) return;
 
+  // Valida che tutti i cantanti abbiano voti
   const votes = draftVotes[judgeName] || {};
   const incomplete = singers.filter(s => {
     const v = votes[s.name];
@@ -523,6 +535,7 @@ async function saveJudgeVotes() {
   }
 
   try {
+    // Cancella classifiche esistenti: ogni modifica ai voti richiede ricalcolo obbligatorio
     await Promise.all([
       deleteDoc(doc(db,'jury_ranking',`s${currentSerata}`)).catch(()=>{}),
       deleteDoc(doc(db,'jury_ranking','festival')).catch(()=>{}),
@@ -531,15 +544,17 @@ async function saveJudgeVotes() {
       votes: draftVotes,
       updatedAt: serverTimestamp()
     });
-    // Deseleziona il giudice e rilascia il lock — nessun reload
+    await releaseJudgeLock(currentSerata, judgeName);
+    // Deseleziona il giudice e nasconde i pulsanti classifica (richiedono ricalcolo)
     selectedJudge  = '';
     _activeLockKey = null;
-    await releaseJudgeLock(currentSerata, judgeName);
     syncHiddenSelector('');
-    const grid    = document.getElementById('votes-grid');
-    const actions = document.getElementById('votes-actions');
-    if (grid)    grid.style.display    = 'none';
-    if (actions) actions.style.display = 'none';
+    document.getElementById('votes-grid').style.display    = 'none';
+    document.getElementById('votes-actions').style.display = 'none';
+    document.getElementById('btn-show-jury').style.display    = 'none';
+    document.getElementById('btn-show-ranking').style.display = 'none';
+    document.getElementById('btn-show-top3').style.display    = 'none';
+    lastRanking = null;
     renderJudgesCompletion();
     showToast(`✓ Voti di ${judgeName} salvati`);
   } catch(e) {
@@ -551,11 +566,13 @@ async function saveJudgeVotes() {
 //  CALCOLO CLASSIFICA — Z-score per giudice
 // ══════════════════════════════════════════════
 async function computeRanking() {
+  // Ricarica voti freschi da Firestore
   try {
     const snap = await getDoc(doc(db,'jury_votes',`s${currentSerata}`));
     draftVotes = snap.exists() ? (snap.data().votes || {}) : draftVotes;
   } catch(e) {}
 
+  // Verifica che almeno un giudice abbia voti completi
   const judgesWithVotes = judges.filter(j => {
     const v = draftVotes[j.name] || {};
     return singers.every(s => v[s.name]?.int > 0 && v[s.name]?.int2 > 0);
@@ -566,6 +583,7 @@ async function computeRanking() {
     return;
   }
 
+  // Z-score per giudice
   const zPerJudge = {};
   const judgeStats = {};
 
@@ -580,329 +598,327 @@ async function computeRanking() {
     zPerJudge[j.name] = singers.map((s,i) => ds > 0 ? (rawScores[i]-mean)/ds : 0);
   });
 
+  // Media Z-score aggregata per cantante
   const zAggregated = singers.map((_,i) => {
     const zvals = judgesWithVotes.map(j => zPerJudge[j.name][i]);
     return zvals.reduce((a,b)=>a+b,0) / zvals.length;
   });
 
+  // Riscaling lineare → range 2-20
   const zMin = Math.min(...zAggregated);
   const zMax = Math.max(...zAggregated);
   const techScores = singers.map((_,i) =>
-    zMax > zMin ? 2 + ((zAggregated[i] - zMin) / (zMax - zMin)) * 18 : 10
+    zMax > zMin ? parseFloat((2 + (zAggregated[i]-zMin)/(zMax-zMin)*18).toFixed(4)) : 11
   );
 
-  // Bonus pubblico
-  let publicBonus = {};
-  try {
-    const pvSnap = await getDocs(collection(db, `votes_s${currentSerata}`));
-    const allVotes = [];
-    pvSnap.forEach(d => allVotes.push(d.data()));
-    singers.forEach(s => { publicBonus[s.name] = 0; });
-    allVotes.forEach(v => {
-      if (!Array.isArray(v.vote)) return;
-      v.vote.forEach((name, pos) => {
-        if (publicBonus[name] !== undefined) publicBonus[name] += (POINTS[pos] || 0);
-      });
-    });
-  } catch(e) { singers.forEach(s => { publicBonus[s.name] = 0; }); }
+  // Bonus pubblico dalla classifica pubblica della serata
+  const publicBonus = await computePublicBonus();
 
-  // Normalizza bonus pubblico su scala 0-5
-  const bonusVals = Object.values(publicBonus);
-  const bonusMax  = Math.max(...bonusVals, 1);
-  const bonusNorm = {};
-  singers.forEach(s => { bonusNorm[s.name] = (publicBonus[s.name] / bonusMax) * 5; });
-
-  // Classifica serata
+  // Punteggio serata
   const serataScores = singers.map((s,i) => ({
     name:       s.name,
-    techScore:  +techScores[i].toFixed(3),
-    bonus:      +bonusNorm[s.name].toFixed(3),
-    total:      +(techScores[i] + bonusNorm[s.name]).toFixed(3),
-  })).sort((a,b) => b.total - a.total);
+    song:       s.song || '',
+    tech:       techScores[i],                              // float 4 decimali
+    bonus:      publicBonus[s.name] || 0,
+    total:      parseFloat((techScores[i] + (publicBonus[s.name] || 0)).toFixed(4)),
+    zAgg:       zAggregated[i],                             // float grezzo per tie-break
+  })).sort((a,b) => b.total - a.total || b.zAgg - a.zAgg);
 
-  // Assegna rank con ex-aequo
-  let rank = 1;
-  serataScores.forEach((r,i) => {
-    if (i > 0 && r.total === serataScores[i-1].total) {
-      r.rank = serataScores[i-1].rank;
-      r.exAequo = true;
-      serataScores[i-1].exAequo = true;
-    } else {
-      r.rank = rank;
-    }
-    rank++;
-    r.rankLabel = r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `${r.rank}°`;
-  });
-
-  // Classifica critica (solo il giudice critica)
-  const criticJudge = judgesWithVotes.find(j => j.isCritic);
+  // Calcola classifica critica separata (solo dal giudice critica)
+  const criticJudge = judges.find(j => j.isCritic);
   let criticRanking = null;
-  if (criticJudge) {
-    criticRanking = singers.map((s,i) => ({
-      name:      s.name,
-      techScore: +(zPerJudge[criticJudge.name][i]).toFixed(3),
-    })).sort((a,b) => b.techScore - a.techScore);
-    let cr = 1;
-    criticRanking.forEach((r,i) => {
-      if (i > 0 && r.techScore === criticRanking[i-1].techScore) {
-        r.rank = criticRanking[i-1].rank; r.exAequo = true; criticRanking[i-1].exAequo = true;
-      } else { r.rank = cr; }
-      cr++;
-      r.rankLabel = r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `${r.rank}°`;
-    });
+  if (criticJudge && draftVotes[criticJudge.name]) {
+    const criticVotes = draftVotes[criticJudge.name];
+    criticRanking = singers.map(s => ({
+      name:  s.name,
+      song:  s.song || '',
+      score: (criticVotes[s.name]?.int || 0) + (criticVotes[s.name]?.int2 || 0)
+    })).sort((a,b) => b.score - a.score);
   }
 
   lastRanking = { serataScores, judgeStats, judgesWithVotes: judgesWithVotes.map(j=>j.name), criticRanking };
 
+  // Salva in Firestore
   try {
     await setDoc(doc(db,'jury_ranking',`s${currentSerata}`), {
-      ranking:       serataScores,
+      ranking: serataScores,
+      criticRanking,
       judgeStats,
-      criticRanking: criticRanking || null,
-      calculatedAt:  serverTimestamp(),
+      computedAt: serverTimestamp()
     });
   } catch(e) {}
 
   document.getElementById('btn-show-jury').style.display    = '';
   document.getElementById('btn-show-ranking').style.display = '';
   document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
-  showToast('✓ Classifica calcolata');
-  openRankingOverlay('full');
+
+  showToast(`✓ Classifica calcolata (${judgesWithVotes.length} giudici)`);
+}
+
+async function computePublicBonus() {
+  const bonus = {};
+  try {
+    const snap = await getDocs(collection(db, `votes_s${currentSerata}`));
+    const allVotes = [];
+    snap.forEach(d => allVotes.push(d.data()));
+
+    const scores = {};
+    singers.forEach(s => scores[s.name] = 0);
+    allVotes.forEach(({vote}) =>
+      vote?.forEach((name,i) => { if(scores[name]!==undefined) scores[name] += POINTS[i]; })
+    );
+
+    const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+    const bonusPoints = [5,4,3,2,1];
+    ranked.slice(0,5).forEach(([name],i) => { bonus[name] = bonusPoints[i]; });
+  } catch(e) {}
+  return bonus;
 }
 
 // ══════════════════════════════════════════════
-//  CLASSIFICA FESTIVAL (serata 3)
+//  OVERLAY CLASSIFICA SERATA
+// ══════════════════════════════════════════════
+// ── Ranking olimpico: ex-aequo con posizione condivisa ──────────────
+function assignOlympicRanks(sorted, scoreKey) {
+  const medals = ['🥇','🥈','🥉'];
+  let pos = 1;
+  const result = [];
+  for (let i = 0; i < sorted.length; ) {
+    const score = sorted[i][scoreKey];
+    // Trova tutti i pari merito
+    let j = i;
+    while (j < sorted.length && sorted[j][scoreKey] === score) j++;
+    const count   = j - i;
+    const isExAequo = count > 1;
+    const label   = count === 1
+      ? (medals[pos-1] || `${pos}°`)
+      : (medals[pos-1] ? `${medals[pos-1]}` : `${pos}°`);
+    for (let k = i; k < j; k++) {
+      result.push({
+        ...sorted[k],
+        rankLabel: label,
+        exAequo:   isExAequo,
+        rankNum:   pos
+      });
+    }
+    pos += count; // salta le posizioni occupate
+    i = j;
+  }
+  return result;
+}
+
+async function openRankingOverlay(mode = 'full') {
+  // Se lastRanking non è in memoria (es. dopo reload), caricalo da Firestore
+  if (!lastRanking) {
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+      if (!snap.exists()) { showToast('Calcola prima la classifica'); return; }
+      const data = snap.data();
+      // Ricostruisci lastRanking dalla struttura salvata
+      lastRanking = {
+        serataScores:     data.ranking || [],
+        judgeStats:       data.judgeStats || {},
+        judgesWithVotes:  Object.keys(data.judgeStats || {}),
+        criticRanking:    data.criticRanking || null,
+      };
+      // Mostra i pulsanti
+      document.getElementById('btn-show-jury').style.display    = '';
+      document.getElementById('btn-show-ranking').style.display = '';
+      document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
+    } catch(e) { showToast('Errore caricamento classifica'); return; }
+  }
+  const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
+  const labels = ['🥇','🥈','🥉','4°','5°','6°','7°','8°','9°','10°','11°','12°','13°','14°'];
+  const isJury = mode === 'jury';
+
+  // Ordina per la metrica corretta, tie-break su zAgg grezzo
+  const sorted = [...serataScores].sort((a,b) =>
+    isJury ? (b.tech - a.tech || b.zAgg - a.zAgg)
+           : (b.total - a.total || b.zAgg - a.zAgg)
+  );
+  const ranked = assignOlympicRanks(sorted, isJury ? 'tech' : 'total');
+
+  document.getElementById('ranking-overlay-title').textContent = isJury
+    ? `Giuria tecnica — ${SERATA_LABELS[currentSerata]}`
+    : `Classifica completa — ${SERATA_LABELS[currentSerata]}`;
+
+  document.getElementById('ranking-overlay-sub').innerHTML =
+    (isJury ? 'Solo voti giuria · Z-score per giudice · range 2–20' : 'Giuria tecnica + bonus pubblico · range 2–25')
+    + `<br><span style="opacity:.6;font-size:11px">Giudici: ${judgesWithVotes.join(', ')}</span>`;
+
+  document.getElementById('ranking-overlay-rows').innerHTML = isJury ? `
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 60px">
+      <span>#</span><span>Cantante</span><span>Tec</span>
+    </div>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 60px">
+      <span class="n-r-pos">${c.rankLabel}</span>
+      <div class="s-info">
+        <div class="s-name">${c.name}</div>
+        ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+      </div>
+      <span class="n-r-total">${c.tech.toFixed(2)}</span>
+    </div>`).join('')}` : `
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 44px 44px 54px">
+      <span>#</span><span>Cantante</span><span>Tec</span><span>Pub</span><span>Tot</span>
+    </div>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 44px 44px 54px">
+      <span class="n-r-pos">${c.rankLabel}</span>
+      <div class="s-info">
+        <div class="s-name">${c.name}</div>
+        ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+      </div>
+      <span class="n-r-score">${c.tech.toFixed(2)}</span>
+      <span class="n-r-bonus">+${c.bonus}</span>
+      <span class="n-r-total">${c.total.toFixed(2)}</span>
+    </div>`).join('')}`;
+
+  openOverlay('overlay-ranking');
+}
+
+// ══════════════════════════════════════════════
+//  TOP 3 RANDOMIZZATI PER CONDUTTORI
+// ══════════════════════════════════════════════
+async function showTop3Random() {
+  if (!lastRanking) {
+    try {
+      const snap = await getDoc(doc(db,'jury_ranking',`s${currentSerata}`));
+      if (!snap.exists()) { showToast('Calcola prima la classifica'); return; }
+      const data = snap.data();
+      lastRanking = { serataScores: data.ranking||[], judgeStats: data.judgeStats||{}, judgesWithVotes: Object.keys(data.judgeStats||{}), criticRanking: data.criticRanking||null };
+      document.getElementById('btn-show-jury').style.display    = '';
+      document.getElementById('btn-show-ranking').style.display = '';
+      document.getElementById('btn-show-top3').style.display    = currentSerata === 3 ? 'none' : '';
+    } catch(e) { showToast('Calcola prima la classifica'); return; }
+  }
+  const top3 = lastRanking.serataScores.slice(0,3)
+    .map(c => c.name)
+    .sort(() => Math.random() - 0.5);
+
+  const colors = ['#FFD700','#C0C0C0','#CD7F32'];
+  document.getElementById('top3-names').innerHTML = top3.map((name,i) => `
+    <div style="padding:16px;background:var(--surf2);border-radius:var(--r);border:1px solid ${colors[i]}33">
+      <div style="font-size:22px;font-family:'Playfair Display',serif;font-weight:900;color:${colors[i]}">${name}</div>
+    </div>`).join('');
+
+  openOverlay('overlay-top3');
+}
+
+// ══════════════════════════════════════════════
+//  CLASSIFICA FINALE FESTIVAL (serata 3)
 // ══════════════════════════════════════════════
 async function computeFestivalRanking() {
-  if (currentSerata !== 3) return;
   try {
-    const [r1snap, r2snap, r3snap] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       getDoc(doc(db,'jury_ranking','s1')),
       getDoc(doc(db,'jury_ranking','s2')),
-      getDoc(doc(db,'jury_ranking','s3')),
+      getDoc(doc(db,'jury_ranking','s3'))
     ]);
-    if (!r1snap.exists() || !r2snap.exists() || !r3snap.exists()) {
-      showToast('⚠️ Calcola prima le classifiche di tutte e tre le serate');
+
+    if (!r1.exists() || !r2.exists() || !r3.exists()) {
+      showToast('⚠️ Mancano le classifiche di alcune serate. Calcola prima la classifica di ogni serata.');
       return;
     }
-    const r1 = r1snap.data().ranking || [];
-    const r2 = r2snap.data().ranking || [];
-    const r3 = r3snap.data().ranking || [];
 
-    const scoreMap = {};
-    [...r1, ...r2, ...r3].forEach(r => {
-      if (!scoreMap[r.name]) scoreMap[r.name] = 0;
-      scoreMap[r.name] += r.total || 0;
+    const scores = {};
+
+    [r1,r2,r3].forEach((snap,si) => {
+      snap.data().ranking.forEach(c => {
+        if (!scores[c.name]) scores[c.name] = { name:c.name, song:c.song||'', s:[0,0,0] };
+        scores[c.name].s[si] = c.total;
+      });
     });
 
-    const festRanking = Object.entries(scoreMap)
-      .map(([name, total]) => ({ name, total: +total.toFixed(3) }))
-      .sort((a,b) => b.total - a.total);
+    festivalRanking = Object.values(scores).map(c => ({
+      ...c,
+      total: c.s[0] + c.s[1] + c.s[2]
+    })).sort((a,b) => b.total - a.total);
 
-    let rank = 1;
-    festRanking.forEach((r,i) => {
-      if (i > 0 && r.total === festRanking[i-1].total) {
-        r.rank = festRanking[i-1].rank; r.exAequo = true; festRanking[i-1].exAequo = true;
-      } else { r.rank = rank; }
-      rank++;
-      r.rankLabel = r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `${r.rank}°`;
+    // Carica classifica critica dalla serata 3
+    const criticRanking = r3.data().criticRanking || null;
+
+    await setDoc(doc(db,'jury_ranking','festival'), {
+      ranking: festivalRanking,
+      criticRanking,
+      computedAt: serverTimestamp()
     });
 
-    festivalRanking = festRanking;
-    await setDoc(doc(db,'jury_ranking','festival'), { ranking: festRanking, calculatedAt: serverTimestamp() });
     document.getElementById('btn-show-festival').style.display = '';
+    if (r3.data().criticRanking?.length > 0) {
+      document.getElementById('btn-show-critica').style.display = '';
+    }
+
     showToast('✓ Classifica festival calcolata');
-    openFestivalOverlay();
   } catch(e) {
     showToast('Errore: ' + e.message);
   }
 }
 
-// ══════════════════════════════════════════════
-//  OVERLAY CLASSIFICHE
-// ══════════════════════════════════════════════
-function openRankingOverlay(mode) {
-  if (!lastRanking) return;
-  const { serataScores, judgeStats, judgesWithVotes } = lastRanking;
-  const rows = document.getElementById('ranking-overlay-rows');
-  if (!rows) return;
-
-  // Aggiorna titolo overlay
-  const titleEl = document.getElementById('ranking-overlay-title');
-  const subEl   = document.getElementById('ranking-overlay-sub');
-  if (titleEl) titleEl.textContent = mode === 'jury' ? '🏅 Classifica giuria tecnica' : '📊 Classifica con bonus pubblico';
-  if (subEl)   subEl.textContent   = mode === 'jury'
-    ? 'Punteggi Z-score normalizzati — senza bonus pubblico'
-    : 'Punteggi Z-score + bonus voto pubblico';
-
-  if (mode === 'jury') {
-    rows.innerHTML = `
-      <div class="n-ranking-head">
-        <span>#</span><span style="text-align:left">Cantante</span><span>Tec.</span><span></span><span>Tot.</span>
-      </div>` +
-      serataScores.map(r => `
-      <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
-        <div class="n-r-pos">${r.rankLabel}</div>
-        <div style="text-align:left;min-width:0">
-          <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-          ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
-        </div>
-        <div class="n-r-score">${r.techScore.toFixed(1)}</div>
-        <div class="n-r-bonus">—</div>
-        <div class="n-r-total">${r.techScore.toFixed(1)}</div>
-      </div>`).join('');
-  } else {
-    rows.innerHTML = `
-      <div class="n-ranking-head">
-        <span>#</span><span style="text-align:left">Cantante</span><span>Tec.</span><span>+Pub.</span><span>Tot.</span>
-      </div>` +
-      serataScores.map(r => `
-      <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
-        <div class="n-r-pos">${r.rankLabel}</div>
-        <div style="text-align:left;min-width:0">
-          <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-          ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
-        </div>
-        <div class="n-r-score">${r.techScore.toFixed(1)}</div>
-        <div class="n-r-bonus">+${r.bonus.toFixed(1)}</div>
-        <div class="n-r-total">${r.total.toFixed(1)}</div>
-      </div>`).join('');
-  }
-
-  // Statistiche giudici (se il div esiste nell'HTML)
-  const statsEl = document.getElementById('ranking-judge-stats');
-  if (statsEl) {
-    statsEl.innerHTML = judgesWithVotes.map(jn => {
-      const s = judgeStats[jn] || {};
-      return `<div class="judge-stat-row"><b>${jn}</b> — media: ${s.mean}, σ: ${s.ds}, range: ${s.range}</div>`;
-    }).join('');
-  }
-
-  openOverlay('overlay-ranking');
-}
-
-function showTop3Random() {
-  if (!lastRanking) return;
-  const top3 = lastRanking.serataScores.slice(0,3).map(r => r.name).sort(() => Math.random() - 0.5);
-  const el = document.getElementById('top3-names');
-  if (el) el.innerHTML = top3.map((n,i) => `<div class="top3-item" style="animation-delay:${i*0.3}s">${n}</div>`).join('');
-  openOverlay('overlay-top3');
-}
-
 function openFestivalOverlay() {
   if (!festivalRanking) return;
-  const rows = document.getElementById('festival-overlay-rows');
-  if (!rows) return;
-  rows.innerHTML = `
-    <div class="n-ranking-head">
-      <span>#</span><span style="text-align:left">Cantante</span><span></span><span></span><span>Tot.</span>
-    </div>` +
-    festivalRanking.map(r => `
-    <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
-      <div class="n-r-pos">${r.rankLabel}</div>
-      <div style="text-align:left;min-width:0;grid-column:2/5">
-        <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-        ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+
+  const fmt = v => (typeof v === 'number' && v > 0) ? v.toFixed(2) : '—';
+  const ranked = assignOlympicRanks(
+    [...festivalRanking].sort((a,b) => b.total - a.total),
+    'total'
+  );
+
+  document.getElementById('festival-overlay-rows').innerHTML = `
+    <div class="n-ranking-head" style="grid-template-columns:44px 1fr 44px 44px 44px 56px">
+      <span>#</span><span>Cantante</span><span>S1</span><span>S2</span><span>S3</span><span>Tot</span>
+    </div>
+    ${ranked.map(c => `
+    <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 44px 44px 44px 56px">
+      <span class="n-r-pos">${c.rankLabel}</span>
+      <div class="s-info">
+        <div class="s-name">${c.name}</div>
+        ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+        ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
       </div>
-      <div class="n-r-total">${r.total.toFixed(1)}</div>
-    </div>`).join('');
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[0])}</span>
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[1])}</span>
+      <span class="n-r-score" style="font-size:12px">${fmt(c.s[2])}</span>
+      <span class="n-r-total">${fmt(c.total)}</span>
+    </div>`).join('')}`;
+
   openOverlay('overlay-festival');
 }
 
 async function openCriticaOverlay() {
   try {
     const snap = await getDoc(doc(db,'jury_ranking','s3'));
-    const criticRanking = snap.exists() ? (snap.data().criticRanking || []) : [];
-    const rows = document.getElementById('critica-overlay-rows');
-    if (!rows) return;
-    if (criticRanking.length === 0) {
-      rows.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center">Nessun giudice critica configurato</div>';
-    } else {
-      rows.innerHTML = `
-        <div class="n-ranking-head">
-          <span>#</span><span style="text-align:left">Cantante</span><span></span><span></span><span>Z</span>
-        </div>` +
-        criticRanking.map(r => `
-        <div class="n-ranking-row${r.exAequo ? ' ex-aequo' : ''}">
-          <div class="n-r-pos">${r.rankLabel}</div>
-          <div style="text-align:left;min-width:0;grid-column:2/5">
-            <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-            ${r.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
-          </div>
-          <div class="n-r-total">${r.techScore.toFixed(2)}</div>
-        </div>`).join('');
-    }
+    const criticRanking = snap.exists() ? snap.data().criticRanking : null;
+    if (!criticRanking?.length) { showToast('Nessuna classifica critica disponibile'); return; }
+
+    const ranked = assignOlympicRanks(
+      [...criticRanking].sort((a,b) => b.score - a.score),
+      'score'
+    );
+    document.getElementById('critica-overlay-rows').innerHTML =
+      ranked.map(c => `
+      <div class="n-ranking-row ${c.exAequo ? 'ex-aequo' : ''}" style="grid-template-columns:44px 1fr 50px">
+        <span class="n-r-pos">${c.rankLabel}</span>
+        <div class="s-info">
+          <div class="s-name">${c.name}</div>
+          ${c.song ? `<div class="s-song">♪ ${c.song}</div>` : ''}
+          ${c.exAequo ? '<div class="ex-aequo-badge">ex-aequo</div>' : ''}
+        </div>
+        <span class="n-r-total">${c.score}</span>
+      </div>`).join('');
+
     openOverlay('overlay-critica');
   } catch(e) {
-    showToast('Errore: ' + e.message);
+    showToast('Errore caricamento classifica critica');
   }
 }
 
 // ══════════════════════════════════════════════
-//  BACKUP JSON — voti pubblico + giuria
+//  HELPERS
 // ══════════════════════════════════════════════
-async function exportBackupJSON() {
-  const btn = document.getElementById('btn-backup-json');
-  if (btn) { btn.textContent = '⏳ Download in corso…'; btn.disabled = true; }
-  try {
-    // Voti pubblico
-    const publicSnap = await getDocs(collection(db, `votes_s${currentSerata}`));
-    const publicVotes = [];
-    publicSnap.forEach(d => publicVotes.push({ _docId: d.id, ...d.data() }));
-
-    // Voti giuria
-    const jurySnap = await getDoc(doc(db, 'jury_votes', `s${currentSerata}`));
-    const juryVotes = jurySnap.exists() ? jurySnap.data() : {};
-
-    // Giudici
-    const judgesSnap = await getDoc(doc(db, 'judges', `s${currentSerata}`));
-    const judgesData = judgesSnap.exists() ? judgesSnap.data() : {};
-
-    // Cantanti
-    const singersSnap = await getDoc(doc(db, 'singers', `s${currentSerata}`));
-    const singersData = singersSnap.exists() ? singersSnap.data() : {};
-
-    // Classifica calcolata (se presente)
-    const rankingSnap = await getDoc(doc(db, 'jury_ranking', `s${currentSerata}`));
-    const rankingData = rankingSnap.exists() ? rankingSnap.data() : null;
-
-    const backup = {
-      _meta: {
-        generatedAt:  new Date().toISOString(),
-        serata:       currentSerata,
-        serataLabel:  SERATA_LABELS[currentSerata],
-        publicVotes:  publicVotes.length,
-        juryJudges:   (judgesData.list || []).length,
-      },
-      singers:      singersData,
-      judges:       judgesData,
-      jury_votes:   juryVotes,
-      public_votes: publicVotes,
-      jury_ranking: rankingData,
-    };
-
-    const json     = JSON.stringify(backup, null, 2);
-    const blob     = new Blob([json], { type: 'application/json;charset=utf-8;' });
-    const url      = URL.createObjectURL(blob);
-    const ts       = new Date().toISOString().slice(0,16).replace('T','_').replace(':','h');
-    const filename = `backup_goro_s${currentSerata}_${ts}.json`;
-    const a        = document.createElement('a');
-    a.href         = url;
-    a.download     = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    showToast(`✓ Backup scaricato: ${filename}`);
-  } catch(e) {
-    showToast('Errore backup: ' + e.message);
-  } finally {
-    if (btn) { btn.textContent = '💾 Scarica backup JSON serata'; btn.disabled = false; }
-  }
-}
-
-// ══════════════════════════════════════════════
-//  OVERLAY HELPERS
-// ══════════════════════════════════════════════
+// Swipe sinistro o verso il basso sulla overlay-box = chiudi
 function attachSwipeClose(box, overlayId) {
   let startX = null, startY = null;
   const onStart = e => {
@@ -914,9 +930,11 @@ function attachSwipeClose(box, overlayId) {
     const t = e.changedTouches ? e.changedTouches[0] : e;
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
+    // Swipe sinistra→destra come Android back (dx > 60)
     if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.2) closeOverlay(overlayId);
     startX = null; startY = null;
   };
+  // Rimuovi listener precedenti se già attaccati
   box._swipeStart && box.removeEventListener('touchstart', box._swipeStart);
   box._swipeEnd   && box.removeEventListener('touchend',   box._swipeEnd);
   box._swipeStart = onStart; box._swipeEnd = onEnd;
@@ -930,17 +948,18 @@ function openOverlay(id) {
   el.style.display = 'flex';
   const box = el.querySelector('.overlay-box');
   if (box) box.scrollTop = 0;
+  // Tap sul backdrop (fuori dalla box) = chiudi
   el._backdropHandler = e => { if (e.target === el) closeOverlay(id); };
   el.addEventListener('click', el._backdropHandler);
+  // Swipe sinistro sulla box = chiudi
   if (box) attachSwipeClose(box, id);
 }
-
 function closeOverlay(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.style.display = 'none';
   if (el._backdropHandler) { el.removeEventListener('click', el._backdropHandler); delete el._backdropHandler; }
-  // Rilascia il lock se si chiude l'overlay giudici in qualsiasi modo
+  // Se si esce dall'overlay voti (in qualsiasi modo), rilascia il lock sul giudice corrente
   if (id === 'overlay-judges' && selectedJudge) {
     releaseJudgeLock(currentSerata, selectedJudge).catch(() => {});
     selectedJudge = '';
@@ -961,6 +980,53 @@ async function signInWithGoogle() {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch(e) {
     if (e.code !== 'auth/popup-closed-by-user') showToast('Accesso non riuscito. Riprova.');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  BACKUP JSON — voti pubblico + giuria
+// ══════════════════════════════════════════════
+async function exportBackupJSON() {
+  const btn = document.getElementById('btn-backup-json');
+  if (btn) { btn.textContent = '⏳ Download in corso…'; btn.disabled = true; }
+  try {
+    const publicSnap  = await getDocs(collection(db, `votes_s${currentSerata}`));
+    const publicVotes = [];
+    publicSnap.forEach(d => publicVotes.push({ _docId: d.id, ...d.data() }));
+
+    const jurySnap    = await getDoc(doc(db, 'jury_votes',   `s${currentSerata}`));
+    const judgesSnap  = await getDoc(doc(db, 'judges',       `s${currentSerata}`));
+    const singersSnap = await getDoc(doc(db, 'singers',      `s${currentSerata}`));
+    const rankingSnap = await getDoc(doc(db, 'jury_ranking', `s${currentSerata}`));
+
+    const backup = {
+      _meta: {
+        generatedAt: new Date().toISOString(),
+        serata:      currentSerata,
+        serataLabel: SERATA_LABELS[currentSerata],
+        publicVotes: publicVotes.length,
+        juryJudges:  (judgesSnap.exists() ? judgesSnap.data().list || [] : []).length,
+      },
+      singers:      singersSnap.exists()  ? singersSnap.data()  : {},
+      judges:       judgesSnap.exists()   ? judgesSnap.data()   : {},
+      jury_votes:   jurySnap.exists()     ? jurySnap.data()     : {},
+      public_votes: publicVotes,
+      jury_ranking: rankingSnap.exists()  ? rankingSnap.data()  : null,
+    };
+
+    const json     = JSON.stringify(backup, null, 2);
+    const blob     = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const url      = URL.createObjectURL(blob);
+    const ts       = new Date().toISOString().slice(0,16).replace('T','_').replace(':','h');
+    const filename = `backup_goro_s${currentSerata}_${ts}.json`;
+    const a        = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    showToast(`✓ Backup scaricato: ${filename}`);
+  } catch(e) {
+    showToast('Errore backup: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '💾 Scarica backup JSON serata'; btn.disabled = false; }
   }
 }
 
