@@ -19,7 +19,7 @@
 
   <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:18px;animation:fadeDown .7s .2s ease both">
     <p style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold);line-height:1.3;max-width:320px">
-      Grazie a tutti per una serata indimenticabile!
+      Grazie a tutti per queste serate indimenticabili!
     </p>
     <p style="font-size:15px;color:var(--muted);max-width:300px;line-height:1.7">
       Un ringraziamento speciale va a tutti i <strong style="color:var(--text)">cantanti</strong> che hanno saputo emozionarci, al pubblico che ha partecipato con entusiasmo, e a tutto lo <strong style="color:var(--text)">staff dello Young Club di Goro</strong> per l'organizzazione impeccabile delle serate.
@@ -66,8 +66,61 @@
       Grazie a loro, ispirato dalla loro voglia di costruire e di fare sempre del meglio, ho dedicato giorni e notti allo sviluppo di questa applicazione — cercando di dare il mio contributo a un evento che è e rimarrà nei cuori dei goresi.
     </p>
 
-    <p style="font-size:12px;color:rgba(255,255,255,.2);margin-top:8px;letter-spacing:.5px">— Roberto Gennari</p>
-    <div style="width:48px;height:1px;background:rgba(255,255,255,.06)"></div>
+    <div style="margin-top:24px;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <svg viewBox="0 0 320 90" width="320" height="90" xmlns="http://www.w3.org/2000/svg"
+           style="overflow:visible;max-width:100%">
+        <defs>
+          <style>
+            .sig-path {
+              fill: none;
+              stroke: rgba(201,168,76,0.75);
+              stroke-width: 1.8;
+              stroke-linecap: round;
+              stroke-linejoin: round;
+              stroke-dasharray: 2000;
+              stroke-dashoffset: 2000;
+              animation: drawSig 3.2s 1.2s cubic-bezier(.4,0,.2,1) forwards;
+            }
+            @keyframes drawSig {
+              to { stroke-dashoffset: 0; }
+            }
+          </style>
+        </defs>
+        <!-- Grazie -->
+        <path class="sig-path" d="
+          M 18 38 C 20 30, 28 24, 36 28 C 42 31, 42 40, 38 46 C 34 52, 24 52, 20 46 C 16 40, 20 32, 28 34
+          M 44 28 L 42 52
+          M 38 38 L 50 38
+          M 56 32 C 58 28, 66 26, 68 32 C 70 38, 64 44, 60 48 C 58 50, 56 52, 58 54
+          M 74 26 L 72 54
+          M 70 38 C 74 34, 82 32, 84 38 C 86 44, 80 52, 76 52
+          M 90 32 C 92 28, 100 26, 102 32 C 104 38, 98 46, 94 50 C 92 52, 90 54, 92 56
+          M 106 28 L 104 52 C 104 56, 108 58, 112 56
+          M 100 40 L 112 40
+        "/>
+        <!-- Roberto Gennari -->
+        <path class="sig-path" style="animation-delay:2.6s;stroke:rgba(240,237,230,0.35);stroke-width:1.2" d="
+          M 14 72 C 16 66, 22 62, 28 64 C 34 66, 34 74, 30 78 C 28 80, 24 80, 22 78
+          M 28 74 L 38 82
+          M 42 66 C 44 62, 50 60, 52 66 C 54 72, 48 78, 44 80
+          M 56 60 L 54 82
+          M 52 72 C 56 68, 64 66, 66 72 C 68 78, 62 82, 58 82
+          M 70 64 C 72 60, 78 58, 80 62 L 78 82
+          M 84 66 C 86 62, 94 60, 94 66 L 92 82
+          M 84 66 C 88 62, 94 60, 96 66
+          M 102 60 L 100 82
+          M 108 66 C 110 62, 118 60, 118 66 C 118 72, 112 78, 108 80 C 106 82, 106 84, 110 84
+          M 130 66 C 132 60, 142 58, 144 64 C 146 70, 140 78, 136 80
+          M 152 60 L 150 82
+          M 148 72 C 152 68, 160 66, 162 72 C 164 78, 158 82, 154 82
+          M 166 60 L 164 82
+          M 162 72 C 166 68, 174 66, 176 72 L 174 82
+          M 180 66 C 182 62, 190 58, 192 64 C 194 70, 188 78, 184 80
+          M 196 60 L 194 82
+        "/>
+      </svg>
+    </div>
+    <div style="width:48px;height:1px;background:rgba(255,255,255,.06);margin-top:8px"></div>
   </div>
 
 </div>
