@@ -10,6 +10,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&family=Great+Vibes&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
+
+const sigGrazie = document.querySelector('.sig-grazie');
+const sigNome   = document.querySelector('.sig-nome');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      sigGrazie.classList.add('visible');
+      setTimeout(() => sigNome.classList.add('visible'), 5500);
+      observer.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+
+observer.observe(sigGrazie);  
+  
 <body>
 
 <div class="stars" id="stars"></div>
@@ -80,7 +96,9 @@
         line-height: 1.2;
         width: 100%;
         text-align: center;
-        animation: revealSig 7.5s 1s cubic-bezier(.4,0,.2,1) both;
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        transition: clip-path 7.5s cubic-bezier(.4,0,.2,1), opacity 0.1s;
       }
       .sig-nome {
         font-family: 'Great Vibes', cursive;
@@ -89,7 +107,17 @@
         line-height: 1.2;
         width: 100%;
         text-align: center;
-        animation: revealSig 8.5s 5s cubic-bezier(.4,0,.2,1) both;
+        opacity: 0;
+        clip-path: inset(0 100% 0 0);
+        transition: clip-path 8.5s cubic-bezier(.4,0,.2,1), opacity 0.1s;
+      }
+      .sig-grazie.visible {
+        opacity: 1;
+        clip-path: inset(0 0% 0 0);
+      }
+      .sig-nome.visible {
+        opacity: 0.45;
+        clip-path: inset(0 0% 0 0);
       }
     </style>
   <span class="sig-grazie">Grazie</span>
