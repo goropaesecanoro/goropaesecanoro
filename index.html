@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 
+<script>  
 const sigGrazie = document.querySelector('.sig-grazie');
 const sigNome   = document.querySelector('.sig-nome');
 
@@ -25,6 +26,7 @@ const observer = new IntersectionObserver(entries => {
 }, { threshold: 0.5 });
 
 observer.observe(sigGrazie);  
+</script>
   
 <body>
 
